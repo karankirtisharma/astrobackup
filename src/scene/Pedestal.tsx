@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { AdditiveBlending, Mesh, MeshStandardMaterial, ShaderMaterial } from 'three';
-import { PLANE_VERT, RING_FRAG } from './shaders';
+import { PLANE_VERT, RING_FRAG, CONTACT_FRAG } from './shaders';
 import { lightProxy, fxProxy } from '../motion/proxies';
 import { CHAR_X } from '../config/cameraPoses';
 
@@ -46,6 +46,8 @@ export function Pedestal({ side }: { side: 'left' | 'right' }) {
     []
   );
 
+  const shadowUniforms = useMemo(() => ({ uStrength: { value: 0.72 } }), []);
+
   useFrame(({ clock }) => {
     const u = material.current.uniforms;
     u.uTime.value = clock.elapsedTime;
@@ -61,6 +63,19 @@ export function Pedestal({ side }: { side: 'left' | 'right' }) {
 
   return (
     <group position={[x, 0, 0]}>
+      {/* Occlusion pooling under the platform — without it the composite
+          reads as a sticker on the backplate rather than a thing standing
+          on its floor. Drawn first so the halo glows over it. */}
+      <mesh rotation-x={-Math.PI / 2} position-y={0.004} renderOrder={-2}>
+        <planeGeometry args={[4.2, 4.2]} />
+        <shaderMaterial
+          vertexShader={PLANE_VERT}
+          fragmentShader={CONTACT_FRAG}
+          uniforms={shadowUniforms}
+          transparent
+          depthWrite={false}
+        />
+      </mesh>
       <primitive object={platform} />
       {/* State-glow halo on the floor, just outside the platform edge. */}
       <mesh rotation-x={-Math.PI / 2} position-y={0.02}>

@@ -33,17 +33,17 @@ export const RING_FRAG = /* glsl */ `
 `;
 
 /**
- * Wall-base contact shadow. Every real wall/floor corner has ambient
- * occlusion pooling in it; without one the junction reads as two pasted
- * layers. v=1 is the far edge (at the wall).
+ * Soft radial contact shadow — grounds a platform onto the backplate's
+ * painted floor. Without it, objects composited over a matte painting read
+ * as stickers.
  */
 export const CONTACT_FRAG = /* glsl */ `
   varying vec2 vUv;
   uniform float uStrength;
   void main() {
-    float a = pow(clamp(vUv.y, 0.0, 1.0), 2.2) * uStrength;
-    // Fade out at the left/right extremes so the strip never shows an edge.
-    a *= smoothstep(0.0, 0.06, vUv.x) * (1.0 - smoothstep(0.94, 1.0, vUv.x));
+    float d = length(vUv - 0.5) * 2.0;
+    float a = (1.0 - smoothstep(0.15, 1.0, d)) * uStrength;
+    if (a < 0.004) discard;
     gl_FragColor = vec4(0.0, 0.0, 0.0, a);
   }
 `;

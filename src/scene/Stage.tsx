@@ -1,133 +1,110 @@
 import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { MeshReflectorMaterial, useTexture } from '@react-three/drei';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useTexture } from '@react-three/drei';
 import {
   AdditiveBlending,
   BufferGeometry,
   ClampToEdgeWrapping,
   Float32BufferAttribute,
+  MathUtils,
+  Mesh,
   MirroredRepeatWrapping,
+  PerspectiveCamera,
   ShaderMaterial,
   SRGBColorSpace,
+  Vector3,
 } from 'three';
-import { DUST_VERT, DUST_FRAG, PLANE_VERT, CONTACT_FRAG } from './shaders';
-import { useStore } from '../state/store';
-import { DEBUG_FLAGS } from '../debugFlags';
+import { DUST_VERT, DUST_FRAG } from './shaders';
 
 const CHAMBER_URL = `${import.meta.env.BASE_URL}env/chamber.webp`;
 useTexture.preload(CHAMBER_URL);
 
-/** Plate geometry, derived from one measurement. */
 const CHAMBER_ASPECT = 1857 / 847;
-/** World width of one frame of the plate. */
-const FRAME_W = 20;
-const FRAME_H = FRAME_W / CHAMBER_ASPECT;
 /**
  * Where the chamber's back wall meets its floor, as a fraction down the
- * image (measured from the luminance ramp). Aligning this line to world y=0
- * makes the plate meet the real floor at an architectural corner — the
- * junction is geometry, not a blend, so there is nothing left to seam.
+ * image (measured from its luminance ramp). The backplate anchors this line
+ * to the scene's true horizon, so the painted floor and the 3D ground plane
+ * share one vanishing line — the platforms sit on the render's own floor.
  */
 const FLOOR_LINE = 0.6;
-const PLATE_Y = FRAME_H * (FLOOR_LINE - 0.5);
-const PLATE_Z = -8.5;
+/** Camera-space distance of the backplate. Inside the far plane (60). */
+const PLATE_DIST = 34;
+/** Oversize so horizon anchoring never exposes an edge. */
+const PLATE_OVERSCAN = 1.08;
 
 /**
- * The chamber: one baked plate for the back wall, the real reflective slab
- * for every bit of ground the visitor actually stands near. The plate's own
- * light strips streak down into the reflector, so the near floor continues
- * the far floor by reflection rather than by patching.
+ * The chamber is the render itself: a camera-locked backplate that always
+ * covers the frame (never cropped, never letterboxed), with its floor line
+ * pinned to the 3D horizon so world-space objects composite onto its floor.
+ * There is no 3D floor slab — nothing can cut the plate.
  */
 export function Stage() {
-  const tier = useStore((s) => s.tier);
-
   return (
     <>
-      <Floor tier={tier} />
-      <ContactShadow />
-      <Backdrop />
+      <Backplate />
       <Dust />
     </>
   );
 }
 
-/** Occlusion pooling in the wall/floor corner — sells it as one room. */
-function ContactShadow() {
-  const uniforms = useMemo(() => ({ uStrength: { value: 0.9 } }), []);
-  const depth = 5;
-  return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, 0.006, PLATE_Z + depth / 2]}>
-      <planeGeometry args={[FRAME_W * 3, depth]} />
-      <shaderMaterial
-        vertexShader={PLANE_VERT}
-        fragmentShader={CONTACT_FRAG}
-        uniforms={uniforms}
-        transparent
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
-function Floor({ tier }: { tier: 'high' | 'mid' | 'low' }) {
-  // The reflector renders the whole scene into an offscreen FBO each frame —
-  // reserved for the high tier, at a resolution the blur makes equivalent.
-  // Known cost: drei's internal render targets are not disposed if the
-  // reflector unmounts on a tier downgrade (~8MB GPU, at most once per
-  // session) — accepted over reaching into drei internals.
-  if (tier !== 'high' || DEBUG_FLAGS.noReflect) {
-    return (
-      <mesh rotation-x={-Math.PI / 2} position-y={0}>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial color="#101312" roughness={0.6} metalness={0.6} />
-      </mesh>
-    );
-  }
-  return (
-    <mesh rotation-x={-Math.PI / 2} position-y={0}>
-      <planeGeometry args={[60, 60]} />
-      {/* Wet stone: sharp enough to carry the plate's light strips as
-          streaks, so the near ground reads as the same floor. */}
-      <MeshReflectorMaterial
-        resolution={512}
-        blur={[160, 55]}
-        mixBlur={0.8}
-        mixStrength={3.3}
-        depthScale={0.6}
-        minDepthThreshold={0.3}
-        maxDepthThreshold={1.2}
-        roughness={0.55}
-        color="#1b201d"
-        metalness={0.5}
-        mirror={0.8}
-      />
-    </mesh>
-  );
-}
-
-function Backdrop() {
-  // Baked lighting, so an unlit material; scene fog recesses it and the
-  // reflector floor mirrors it.
+function Backplate() {
   const chamber = useTexture(CHAMBER_URL);
   chamber.colorSpace = SRGBColorSpace;
-  // Sideways: mirrored repeat, so the wall continues past the view edge on
-  // any aspect ratio with seamless joins and no stretch.
-  // Vertically: clamp — above the frame the plate's dark ceiling row extends
-  // upward (no mirrored door reappearing), below it the floor rows extend
-  // down where our slab occludes them anyway.
+  // Cover-fit crops rather than stretches; mirrored sideways so an extreme
+  // aspect extends the chamber instead of exposing an edge, clamped
+  // vertically so the ceiling/floor rows carry on.
   chamber.wrapS = MirroredRepeatWrapping;
   chamber.wrapT = ClampToEdgeWrapping;
-  chamber.repeat.set(3, 3);
-  chamber.offset.set(-1, -1);
   chamber.needsUpdate = true;
 
+  const mesh = useRef<Mesh>(null!);
+  const camera = useThree((s) => s.camera) as PerspectiveCamera;
+  const dir = useMemo(() => new Vector3(), []);
+  const offset = useMemo(() => new Vector3(), []);
+
+  // Placed in camera space every frame (rather than parented — R3F's default
+  // camera is not in the scene graph, so its children never render). The
+  // plate is a backplate, not scenery: it holds the frame wherever the dolly
+  // goes.
+  useFrame(({ size }) => {
+    const fovHalf = MathUtils.degToRad(camera.fov) / 2;
+    const viewH = 2 * PLATE_DIST * Math.tan(fovHalf);
+    const viewW = viewH * (size.width / Math.max(size.height, 1));
+
+    // Cover: fill the frame, preserve the render's aspect, crop the excess.
+    let w: number;
+    let h: number;
+    if (viewW / viewH > CHAMBER_ASPECT) {
+      w = viewW;
+      h = viewW / CHAMBER_ASPECT;
+    } else {
+      h = viewH;
+      w = viewH * CHAMBER_ASPECT;
+    }
+    w *= PLATE_OVERSCAN;
+    h *= PLATE_OVERSCAN;
+    mesh.current.scale.set(w, h, 1);
+
+    // Pin the render's floor line to the scene's true horizon. Everything
+    // standing on y=0 then meets the painted floor at the same vanishing
+    // line, and it tracks automatically as the camera pitches.
+    camera.getWorldDirection(dir);
+    const pitchDown = Math.asin(MathUtils.clamp(-dir.y, -1, 1));
+    const horizonY = Math.tan(pitchDown) * PLATE_DIST;
+    const y = horizonY - h * (0.5 - FLOOR_LINE);
+    // Never let the anchor pull an edge into frame.
+    const limit = (h - viewH) / 2;
+
+    mesh.current.quaternion.copy(camera.quaternion);
+    offset.set(0, MathUtils.clamp(y, -limit, limit), -PLATE_DIST).applyQuaternion(camera.quaternion);
+    mesh.current.position.copy(camera.position).add(offset);
+  });
+
   return (
-    // 3x the frame in each axis; the middle tile carries the original
-    // mapping, so the vault door stays centered behind the protocol core
-    // and FLOOR_LINE lands exactly on the real floor.
-    <mesh position={[0, PLATE_Y, PLATE_Z]}>
-      <planeGeometry args={[FRAME_W * 3, FRAME_H * 3]} />
-      <meshBasicMaterial map={chamber} fog color="#e8ece8" toneMapped />
+    <mesh ref={mesh} frustumCulled={false} renderOrder={-1000}>
+      <planeGeometry args={[1, 1]} />
+      {/* Unlit and unfogged: the render carries its own light and depth. */}
+      <meshBasicMaterial map={chamber} fog={false} depthWrite={false} depthTest={false} toneMapped />
     </mesh>
   );
 }

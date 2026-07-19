@@ -60,8 +60,12 @@ export function Experience() {
       }}
       dpr={TIER_DPR[tier]}
       camera={{ fov: BOOT_POSE.fov, near: 0.1, far: 60, position: BOOT_POSE.position }}
-      onCreated={({ raycaster, gl, scene }) => {
-        if (import.meta.env.DEV) (window as unknown as { __scene?: unknown }).__scene = scene;
+      onCreated={({ raycaster, gl, scene, camera }) => {
+        if (import.meta.env.DEV) {
+          const w = window as unknown as { __scene?: unknown; __camera?: unknown };
+          w.__scene = scene;
+          w.__camera = camera;
+        }
         // Pointer events only ever test layer-1 hitboxes — the 260k-triangle
         // character meshes never enter an intersection test.
         raycaster.layers.set(1);
