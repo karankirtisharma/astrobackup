@@ -25,11 +25,11 @@ import { MeshoptSimplifier, MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer
 import sharp from 'sharp';
 
 const MODELS = [
-  { src: 'assets-src/cypherpunk-src.glb', out: 'public/models/cypherpunk.glb', ratio: 0.12 },
-  { src: 'assets-src/astronaut-src.glb', out: 'public/models/astronaut.glb', ratio: 0.12 },
+  { src: 'assets-src/cypherpunk-src.glb', out: 'public/models/cypherpunk.glb', ratio: 0.12, fit: 'height', target: 1.8 },
+  { src: 'assets-src/astronaut-src.glb', out: 'public/models/astronaut.glb', ratio: 0.12, fit: 'height', target: 1.8 },
+  // A disc platform's silhouette survives far harder simplification.
+  { src: 'assets-src/futuristic platform 3d model.glb', out: 'public/models/platform.glb', ratio: 0.05, fit: 'footprint', target: 2.3 },
 ];
-
-const TARGET_HEIGHT = 1.8;
 
 await MeshoptSimplifier.ready;
 await MeshoptEncoder.ready;
@@ -42,7 +42,11 @@ const io = new NodeIO()
     'meshopt.decoder': MeshoptDecoder,
   });
 
-for (const { src, out, ratio } of MODELS) {
+// Optional filter: `node scripts/optimize-models.mjs platform` runs matches only.
+const only = process.argv[2];
+
+for (const { src, out, ratio, fit, target } of MODELS) {
+  if (only && !src.includes(only)) continue;
   console.log(`\n=== ${src} ===`);
   const doc = await io.read(src);
 
@@ -64,11 +68,15 @@ for (const { src, out, ratio } of MODELS) {
     prune()
   );
 
-  // Normalize: feet at y=0, centered on x/z, uniform height.
+  // Normalize: base at y=0, centered on x/z. Characters fit a target height;
+  // platforms fit a target footprint diameter.
   const scene = doc.getRoot().getDefaultScene() ?? doc.getRoot().listScenes()[0];
   const bounds = getBounds(scene);
-  const height = bounds.max[1] - bounds.min[1];
-  const scale = TARGET_HEIGHT / height;
+  const span =
+    fit === 'footprint'
+      ? Math.max(bounds.max[0] - bounds.min[0], bounds.max[2] - bounds.min[2])
+      : bounds.max[1] - bounds.min[1];
+  const scale = target / span;
   const cx = (bounds.min[0] + bounds.max[0]) / 2;
   const cz = (bounds.min[2] + bounds.max[2]) / 2;
 

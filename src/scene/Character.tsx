@@ -5,7 +5,7 @@ import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { Side } from '../state/transitions';
 import { send } from '../state/store';
 import { lightProxy } from '../motion/proxies';
-import { CHAR_X } from '../config/cameraPoses';
+import { CHAR_X, PLATFORM_TOP } from '../config/cameraPoses';
 import { useProceduralIdle } from '../hooks/useProceduralIdle';
 import { hoverEnter, hoverLeave } from './hoverIntent';
 
@@ -79,7 +79,7 @@ export function Character({ side }: { side: Side }) {
   });
 
   return (
-    <group ref={root} position={[isLeft ? -CHAR_X : CHAR_X, 0, 0]}>
+    <group ref={root} position={[isLeft ? -CHAR_X : CHAR_X, PLATFORM_TOP, 0]}>
       <group ref={breath} position-y={PIVOT_Y}>
         <group position-y={-PIVOT_Y}>
           <group ref={sway}>
