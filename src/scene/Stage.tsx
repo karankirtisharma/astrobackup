@@ -39,8 +39,10 @@ function FloorPatch() {
   tex.colorSpace = SRGBColorSpace;
 
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, 0.008, -2.2]}>
-      <planeGeometry args={[19, 12]} />
+    // Deep enough that the far feathered edge tucks BEHIND the vault wall
+    // (z −8.5) — solid stone runs into the wall base, no black gap band.
+    <mesh rotation-x={-Math.PI / 2} position={[0, 0.008, -3.2]}>
+      <planeGeometry args={[19, 15]} />
       <meshBasicMaterial
         map={tex}
         fog
