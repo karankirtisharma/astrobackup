@@ -1,10 +1,13 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { MeshReflectorMaterial } from '@react-three/drei';
-import { AdditiveBlending, BufferGeometry, Float32BufferAttribute, ShaderMaterial } from 'three';
+import { MeshReflectorMaterial, useTexture } from '@react-three/drei';
+import { AdditiveBlending, BufferGeometry, Float32BufferAttribute, ShaderMaterial, SRGBColorSpace } from 'three';
 import { DUST_VERT, DUST_FRAG } from './shaders';
 import { useStore } from '../state/store';
 import { DEBUG_FLAGS } from '../debugFlags';
+
+const VAULT_URL = `${import.meta.env.BASE_URL}env/vault.webp`;
+useTexture.preload(VAULT_URL);
 
 /**
  * The architectural void: a reflective slab, a fogged backdrop cylinder with
@@ -58,38 +61,23 @@ function Floor({ tier }: { tier: 'high' | 'mid' | 'low' }) {
 }
 
 function Backdrop() {
-  const slits = useMemo(() => {
-    const items: { pos: [number, number, number]; h: number }[] = [];
-    for (let i = 0; i < 9; i++) {
-      const ang = Math.PI * (0.65 + (i / 8) * 1.7); // back half arc
-      const r = 11 + (i % 3) * 1.6;
-      items.push({
-        pos: [Math.cos(ang) * r, 2.6 + (i % 2) * 0.9, Math.sin(ang) * r - 2],
-        h: 4.5 + (i % 3) * 1.4,
-      });
-    }
-    return items;
-  }, []);
+  // The vault chamber — baked lighting, so an unlit material; scene fog
+  // recesses it and the reflector floor mirrors it. Its circular vault door
+  // centers behind the protocol core; its own floor hides below ours.
+  const vault = useTexture(VAULT_URL);
+  vault.colorSpace = SRGBColorSpace;
 
   return (
     <>
-      {/* The void itself — fog does the compositional work. */}
+      {/* The void wrapping the sides and above the plate. */}
       <mesh position={[0, 5, -2]}>
         <cylinderGeometry args={[15, 15, 16, 40, 1, true]} />
         <meshStandardMaterial color="#070908" roughness={1} metalness={0} side={1} />
       </mesh>
-      {/* Faint vertical slits, eaten by fog at varying depths. */}
-      {slits.map((s, i) => (
-        <mesh key={i} position={s.pos}>
-          <boxGeometry args={[0.045, s.h, 0.045]} />
-          <meshStandardMaterial
-            color="#0c110e"
-            emissive="#243528"
-            emissiveIntensity={0.7}
-            roughness={1}
-          />
-        </mesh>
-      ))}
+      <mesh position={[0, -0.7, -8.5]}>
+        <planeGeometry args={[26, 14.6]} />
+        <meshBasicMaterial map={vault} fog color="#e2e6e2" toneMapped />
+      </mesh>
     </>
   );
 }

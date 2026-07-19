@@ -75,7 +75,9 @@ export function Experience() {
       }}
     >
       <color attach="background" args={[COLORS.bg]} />
-      <fog attach="fog" args={[COLORS.bg, 9, 26]} />
+      {/* Far plane sits past the vault plate (z −8.5) so it reads through
+          the haze instead of dissolving into it. */}
+      <fog attach="fog" args={[COLORS.bg, 10, 34]} />
       <PerformanceMonitor onDecline={degrade}>
         <Suspense fallback={null}>
           <CameraRig />
