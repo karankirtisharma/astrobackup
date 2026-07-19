@@ -32,6 +32,22 @@ export const RING_FRAG = /* glsl */ `
   }
 `;
 
+/**
+ * Wall-base contact shadow. Every real wall/floor corner has ambient
+ * occlusion pooling in it; without one the junction reads as two pasted
+ * layers. v=1 is the far edge (at the wall).
+ */
+export const CONTACT_FRAG = /* glsl */ `
+  varying vec2 vUv;
+  uniform float uStrength;
+  void main() {
+    float a = pow(clamp(vUv.y, 0.0, 1.0), 2.2) * uStrength;
+    // Fade out at the left/right extremes so the strip never shows an edge.
+    a *= smoothstep(0.0, 0.06, vUv.x) * (1.0 - smoothstep(0.94, 1.0, vUv.x));
+    gl_FragColor = vec4(0.0, 0.0, 0.0, a);
+  }
+`;
+
 /** Floor shockwave — a single expanding pulse on protocol initiation. */
 export const SHOCK_FRAG = /* glsl */ `
   varying vec2 vUv;

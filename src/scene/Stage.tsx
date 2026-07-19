@@ -4,24 +4,39 @@ import { MeshReflectorMaterial, useTexture } from '@react-three/drei';
 import {
   AdditiveBlending,
   BufferGeometry,
+  ClampToEdgeWrapping,
   Float32BufferAttribute,
   MirroredRepeatWrapping,
   ShaderMaterial,
   SRGBColorSpace,
 } from 'three';
-import { DUST_VERT, DUST_FRAG } from './shaders';
+import { DUST_VERT, DUST_FRAG, PLANE_VERT, CONTACT_FRAG } from './shaders';
 import { useStore } from '../state/store';
 import { DEBUG_FLAGS } from '../debugFlags';
 
-const VAULT_URL = `${import.meta.env.BASE_URL}env/vault.webp`;
-const FLOOR_URL = `${import.meta.env.BASE_URL}env/floor.webp`;
-useTexture.preload(VAULT_URL);
-useTexture.preload(FLOOR_URL);
+const CHAMBER_URL = `${import.meta.env.BASE_URL}env/chamber.webp`;
+useTexture.preload(CHAMBER_URL);
+
+/** Plate geometry, derived from one measurement. */
+const CHAMBER_ASPECT = 1857 / 847;
+/** World width of one frame of the plate. */
+const FRAME_W = 20;
+const FRAME_H = FRAME_W / CHAMBER_ASPECT;
+/**
+ * Where the chamber's back wall meets its floor, as a fraction down the
+ * image (measured from the luminance ramp). Aligning this line to world y=0
+ * makes the plate meet the real floor at an architectural corner — the
+ * junction is geometry, not a blend, so there is nothing left to seam.
+ */
+const FLOOR_LINE = 0.6;
+const PLATE_Y = FRAME_H * (FLOOR_LINE - 0.5);
+const PLATE_Z = -8.5;
 
 /**
- * The architectural void: a reflective slab, a fogged backdrop cylinder with
- * faint vertical slits, and drifting dust. The environment frames the
- * protagonists — it never competes with them.
+ * The chamber: one baked plate for the back wall, the real reflective slab
+ * for every bit of ground the visitor actually stands near. The plate's own
+ * light strips streak down into the reflector, so the near floor continues
+ * the far floor by reflection rather than by patching.
  */
 export function Stage() {
   const tier = useStore((s) => s.tier);
@@ -29,34 +44,26 @@ export function Stage() {
   return (
     <>
       <Floor tier={tier} />
-      <FloorPatch />
+      <ContactShadow />
       <Backdrop />
       <Dust />
     </>
   );
 }
 
-/**
- * Pre-lit wet-stone decal over the reflector — fills the dead mid-ground
- * between the platforms and the vault wall. Feathered alpha (premultiplied
- * to black) lets the live reflections take over at its edges.
- */
-function FloorPatch() {
-  const tex = useTexture(FLOOR_URL);
-  tex.colorSpace = SRGBColorSpace;
-
+/** Occlusion pooling in the wall/floor corner — sells it as one room. */
+function ContactShadow() {
+  const uniforms = useMemo(() => ({ uStrength: { value: 0.9 } }), []);
+  const depth = 5;
   return (
-    // Deep enough that the far feathered edge tucks BEHIND the vault wall
-    // (z −8.5) — solid stone runs into the wall base, no black gap band.
-    <mesh rotation-x={-Math.PI / 2} position={[0, 0.008, -3.2]}>
-      <planeGeometry args={[27, 20]} />
-      <meshBasicMaterial
-        map={tex}
-        fog
+    <mesh rotation-x={-Math.PI / 2} position={[0, 0.006, PLATE_Z + depth / 2]}>
+      <planeGeometry args={[FRAME_W * 3, depth]} />
+      <shaderMaterial
+        vertexShader={PLANE_VERT}
+        fragmentShader={CONTACT_FRAG}
+        uniforms={uniforms}
         transparent
         depthWrite={false}
-        color="#d6dad6"
-        toneMapped
       />
     </mesh>
   );
@@ -71,55 +78,56 @@ function Floor({ tier }: { tier: 'high' | 'mid' | 'low' }) {
   if (tier !== 'high' || DEBUG_FLAGS.noReflect) {
     return (
       <mesh rotation-x={-Math.PI / 2} position-y={0}>
-        <planeGeometry args={[44, 44]} />
-        <meshStandardMaterial color="#0a0c0b" roughness={0.85} metalness={0.4} />
+        <planeGeometry args={[60, 60]} />
+        <meshStandardMaterial color="#101312" roughness={0.6} metalness={0.6} />
       </mesh>
     );
   }
   return (
     <mesh rotation-x={-Math.PI / 2} position-y={0}>
-      <planeGeometry args={[44, 44]} />
+      <planeGeometry args={[60, 60]} />
+      {/* Wet stone: sharp enough to carry the plate's light strips as
+          streaks, so the near ground reads as the same floor. */}
       <MeshReflectorMaterial
         resolution={512}
-        blur={[260, 80]}
-        mixBlur={1}
-        mixStrength={2.2}
-        depthScale={0.7}
-        minDepthThreshold={0.35}
+        blur={[160, 55]}
+        mixBlur={0.8}
+        mixStrength={3.3}
+        depthScale={0.6}
+        minDepthThreshold={0.3}
         maxDepthThreshold={1.2}
-        roughness={0.85}
-        color="#0a0c0b"
-        metalness={0.45}
-        mirror={0.55}
+        roughness={0.55}
+        color="#1b201d"
+        metalness={0.5}
+        mirror={0.8}
       />
     </mesh>
   );
 }
 
 function Backdrop() {
-  // The vault chamber — baked lighting, so an unlit material; scene fog
-  // recesses it and the reflector floor mirrors it. Its circular vault door
-  // centers behind the protocol core; its own floor hides below ours.
-  const vault = useTexture(VAULT_URL);
-  vault.colorSpace = SRGBColorSpace;
-  // Mirror-extend in BOTH axes: seamless joins, no stretch — the wall
-  // continues past the view edge on any aspect ratio (ultrawide sideways,
-  // portrait upward — the mirrored ceiling reads as structure) instead of
-  // terminating as a billboard.
-  vault.wrapS = MirroredRepeatWrapping;
-  vault.wrapT = MirroredRepeatWrapping;
-  vault.repeat.set(3, 3);
-  vault.offset.set(-1, -1);
-  vault.needsUpdate = true;
+  // Baked lighting, so an unlit material; scene fog recesses it and the
+  // reflector floor mirrors it.
+  const chamber = useTexture(CHAMBER_URL);
+  chamber.colorSpace = SRGBColorSpace;
+  // Sideways: mirrored repeat, so the wall continues past the view edge on
+  // any aspect ratio with seamless joins and no stretch.
+  // Vertically: clamp — above the frame the plate's dark ceiling row extends
+  // upward (no mirrored door reappearing), below it the floor rows extend
+  // down where our slab occludes them anyway.
+  chamber.wrapS = MirroredRepeatWrapping;
+  chamber.wrapT = ClampToEdgeWrapping;
+  chamber.repeat.set(3, 3);
+  chamber.offset.set(-1, -1);
+  chamber.needsUpdate = true;
 
   return (
-    // 3x the frame in each axis; the middle tile keeps the original mapping,
-    // so the vault door stays centered behind the core. (The old backdrop
-    // cylinder is gone — the camera sat inside it and its near-black flanks
-    // occluded the plate at the view edges.)
-    <mesh position={[0, -0.7, -8.5]}>
-      <planeGeometry args={[78, 43.8]} />
-      <meshBasicMaterial map={vault} fog color="#e2e6e2" toneMapped />
+    // 3x the frame in each axis; the middle tile carries the original
+    // mapping, so the vault door stays centered behind the protocol core
+    // and FLOOR_LINE lands exactly on the real floor.
+    <mesh position={[0, PLATE_Y, PLATE_Z]}>
+      <planeGeometry args={[FRAME_W * 3, FRAME_H * 3]} />
+      <meshBasicMaterial map={chamber} fog color="#e8ece8" toneMapped />
     </mesh>
   );
 }
