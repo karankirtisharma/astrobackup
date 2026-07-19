@@ -28,6 +28,9 @@ export function ProtocolCore() {
   const shockMesh = useRef<Mesh>(null!);
 
   const dpr = Math.min(window.devicePixelRatio, 2);
+  const projected = useMemo(() => new Vector3(), []);
+  const lastPx = useRef(-1);
+  const lastPy = useRef(-1);
 
   const glowUniforms = useMemo(
     () => ({ uTime: { value: 0 }, uIntensity: { value: 0 }, uEnergy: { value: 0 } }),
@@ -54,7 +57,20 @@ export function ProtocolCore() {
     return geo;
   }, []);
 
-  useFrame(({ clock, camera, gl }) => {
+  // The DOM "+" must sit exactly on the in-world core, so it has to follow
+  // the camera's drift rather than a fixed percentage of the viewport.
+  useFrame(({ clock, camera, gl, size }) => {
+    projected.copy(CORE_POS).project(camera);
+    const px = (projected.x * 0.5 + 0.5) * size.width;
+    const py = (1 - (projected.y * 0.5 + 0.5)) * size.height;
+    if (Math.abs(px - lastPx.current) > 0.4 || Math.abs(py - lastPy.current) > 0.4) {
+      lastPx.current = px;
+      lastPy.current = py;
+      const root = document.documentElement.style;
+      root.setProperty('--core-x', `${px.toFixed(1)}px`);
+      root.setProperty('--core-y', `${py.toFixed(1)}px`);
+    }
+
     const t = clock.elapsedTime;
     glowUniforms.uTime.value = t;
     glowUniforms.uIntensity.value = lightProxy.core;

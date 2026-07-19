@@ -318,8 +318,10 @@
 /* ————— PROTOCOL BUTTON ————— */
 .cy-protocol {
   position: fixed;
-  left: 50%;
-  top: 45%;
+  /* Tracks the in-world core's projected position (written per frame by
+     ProtocolCore) so the button never drifts off it as the camera moves. */
+  left: var(--core-x, 50%);
+  top: var(--core-y, 45%);
   /* the BUTTON's center — not the cluster's — lands on the 3D core */
   transform: translate(-50%, -43px);
   z-index: var(--z-hud);

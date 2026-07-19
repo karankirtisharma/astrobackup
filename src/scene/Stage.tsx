@@ -7,12 +7,8 @@ import {
   ClampToEdgeWrapping,
   Float32BufferAttribute,
   MathUtils,
-  Mesh,
-  MirroredRepeatWrapping,
-  PerspectiveCamera,
   ShaderMaterial,
   SRGBColorSpace,
-  Vector3,
 } from 'three';
 import { DUST_VERT, DUST_FRAG } from './shaders';
 
@@ -22,21 +18,46 @@ useTexture.preload(CHAMBER_URL);
 const CHAMBER_ASPECT = 1857 / 847;
 /**
  * Where the chamber's back wall meets its floor, as a fraction down the
- * image (measured from its luminance ramp). The backplate anchors this line
- * to the scene's true horizon, so the painted floor and the 3D ground plane
- * share one vanishing line — the platforms sit on the render's own floor.
+ * image (measured from its luminance ramp). Placed at world y=0, so the
+ * render's floor line IS the ground plane and its painted floor recedes to
+ * the same horizon the platforms stand on.
  */
 const FLOOR_LINE = 0.6;
-/** Camera-space distance of the backplate. Inside the far plane (60). */
-const PLATE_DIST = 34;
-/** Oversize so horizon anchoring never exposes an edge. */
-const PLATE_OVERSCAN = 1.08;
+/** How far behind the stage the chamber stands. Drives parallax strength. */
+const PLATE_Z = 11;
+
+/** Envelope of the authored camera poses, for sizing that always covers. */
+const POSE_MAX_Z = 6.4;
+const POSE_MAX_FOV = 42;
+/**
+ * Lateral/vertical camera excursion the plate must still cover: pose spread
+ * (±0.5) + mouse parallax (±0.3) + idle drift (±0.11). Kept tight, because
+ * every unit of margin is a unit of the render cropped away.
+ */
+const CAM_MARGIN = 1;
 
 /**
- * The chamber is the render itself: a camera-locked backplate that always
- * covers the frame (never cropped, never letterboxed), with its floor line
- * pinned to the 3D horizon so world-space objects composite onto its floor.
- * There is no 3D floor slab — nothing can cut the plate.
+ * Size the plate so every authored camera pose stays inside it at this
+ * aspect — coverage is guaranteed up front, so the plate can then sit still
+ * in world space and simply be looked at. Depends only on the aspect ratio,
+ * so it never breathes while the camera moves.
+ */
+function plateSize(aspect: number) {
+  const fit = MathUtils.clamp(1.45 / aspect, 1, 1.9);
+  const fovDeg = POSE_MAX_FOV + (fit - 1) * 14;
+  const dist = PLATE_Z + POSE_MAX_Z * fit;
+  const halfH = dist * Math.tan(MathUtils.degToRad(fovDeg) / 2) + CAM_MARGIN;
+  const halfW = halfH * aspect + CAM_MARGIN;
+  return halfW / halfH > CHAMBER_ASPECT
+    ? { w: halfW * 2, h: (halfW * 2) / CHAMBER_ASPECT }
+    : { w: halfH * 2 * CHAMBER_ASPECT, h: halfH * 2 };
+}
+
+/**
+ * The chamber is the render itself, standing in world space: the camera
+ * moves against it, so dollies and hover shifts produce real parallax
+ * instead of a backdrop glued to the lens. There is no 3D floor slab — the
+ * render's own floor is the ground.
  */
 export function Stage() {
   return (
@@ -50,59 +71,18 @@ export function Stage() {
 function Backplate() {
   const chamber = useTexture(CHAMBER_URL);
   chamber.colorSpace = SRGBColorSpace;
-  // Cover-fit crops rather than stretches; mirrored sideways so an extreme
-  // aspect extends the chamber instead of exposing an edge, clamped
-  // vertically so the ceiling/floor rows carry on.
-  chamber.wrapS = MirroredRepeatWrapping;
+  chamber.wrapS = ClampToEdgeWrapping;
   chamber.wrapT = ClampToEdgeWrapping;
   chamber.needsUpdate = true;
 
-  const mesh = useRef<Mesh>(null!);
-  const camera = useThree((s) => s.camera) as PerspectiveCamera;
-  const dir = useMemo(() => new Vector3(), []);
-  const offset = useMemo(() => new Vector3(), []);
-
-  // Placed in camera space every frame (rather than parented — R3F's default
-  // camera is not in the scene graph, so its children never render). The
-  // plate is a backplate, not scenery: it holds the frame wherever the dolly
-  // goes.
-  useFrame(({ size }) => {
-    const fovHalf = MathUtils.degToRad(camera.fov) / 2;
-    const viewH = 2 * PLATE_DIST * Math.tan(fovHalf);
-    const viewW = viewH * (size.width / Math.max(size.height, 1));
-
-    // Cover: fill the frame, preserve the render's aspect, crop the excess.
-    let w: number;
-    let h: number;
-    if (viewW / viewH > CHAMBER_ASPECT) {
-      w = viewW;
-      h = viewW / CHAMBER_ASPECT;
-    } else {
-      h = viewH;
-      w = viewH * CHAMBER_ASPECT;
-    }
-    w *= PLATE_OVERSCAN;
-    h *= PLATE_OVERSCAN;
-    mesh.current.scale.set(w, h, 1);
-
-    // Pin the render's floor line to the scene's true horizon. Everything
-    // standing on y=0 then meets the painted floor at the same vanishing
-    // line, and it tracks automatically as the camera pitches.
-    camera.getWorldDirection(dir);
-    const pitchDown = Math.asin(MathUtils.clamp(-dir.y, -1, 1));
-    const horizonY = Math.tan(pitchDown) * PLATE_DIST;
-    const y = horizonY - h * (0.5 - FLOOR_LINE);
-    // Never let the anchor pull an edge into frame.
-    const limit = (h - viewH) / 2;
-
-    mesh.current.quaternion.copy(camera.quaternion);
-    offset.set(0, MathUtils.clamp(y, -limit, limit), -PLATE_DIST).applyQuaternion(camera.quaternion);
-    mesh.current.position.copy(camera.position).add(offset);
-  });
+  // Aspect-driven only — the plate holds still while the camera moves, which
+  // is what makes the parallax read.
+  const { width, height } = useThree((s) => s.size);
+  const { w, h } = useMemo(() => plateSize(width / Math.max(height, 1)), [width, height]);
 
   return (
-    <mesh ref={mesh} frustumCulled={false} renderOrder={-1000}>
-      <planeGeometry args={[1, 1]} />
+    <mesh position={[0, h * (FLOOR_LINE - 0.5), -PLATE_Z]} frustumCulled={false} renderOrder={-1000}>
+      <planeGeometry args={[w, h]} />
       {/* Unlit and unfogged: the render carries its own light and depth. */}
       <meshBasicMaterial map={chamber} fog={false} depthWrite={false} depthTest={false} toneMapped />
     </mesh>

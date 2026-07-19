@@ -26,8 +26,8 @@ export function CameraRig() {
     easing.damp3(
       parallax.current,
       [
-        pointer.x * 0.14 * cameraProxy.parallax,
-        pointer.y * 0.07 * cameraProxy.parallax,
+        pointer.x * 0.3 * cameraProxy.parallax,
+        pointer.y * 0.14 * cameraProxy.parallax,
         0,
       ],
       0.6,
@@ -35,9 +35,11 @@ export function CameraRig() {
     );
 
     // Incommensurate sines = organic handheld-dolly breathing, never a loop.
-    const driftX = Math.sin(t * 0.23) * 0.028;
-    const driftY = Math.sin(t * 0.17 + 1.3) * 0.02;
-    const driftZ = Math.sin(t * 0.11) * 0.02;
+    // Enough amplitude that the chamber visibly moves against the stage —
+    // the parallax is what tells the eye this is a room, not a backdrop.
+    const driftX = Math.sin(t * 0.23) * 0.11;
+    const driftY = Math.sin(t * 0.17 + 1.3) * 0.05;
+    const driftZ = Math.sin(t * 0.11) * 0.16;
 
     // The protocol thump: a decaying push, plus the faintest tremble.
     const s = cameraProxy.shake;
