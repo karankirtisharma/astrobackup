@@ -1,0 +1,327 @@
+/* ————————————————————————————————————————————————
+   Protocol / synchronization overlay — the ceremony.
+   ———————————————————————————————————————————————— */
+
+.cy-sync {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sync);
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: calc(var(--frame-inset) + 76px) var(--frame-inset) calc(var(--frame-inset) + 8px);
+}
+
+.cy-sync__header {
+  text-align: center;
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: center;
+}
+
+.cy-sync__phase {
+  font-size: 12px;
+  letter-spacing: 0.4em;
+  padding-left: 0.4em;
+  color: var(--green);
+}
+
+.cy-sync__title {
+  font-size: clamp(20px, 2.6vw, 30px);
+  font-weight: 300;
+  letter-spacing: 0.35em;
+  padding-left: 0.35em;
+  color: var(--text-hi);
+}
+
+.cy-sync__title--green {
+  color: var(--green);
+  text-shadow: 0 0 14px var(--green-glow);
+}
+
+.cy-sync__ver {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--grey-3);
+}
+
+/* center block */
+.cy-sync__center {
+  align-self: end;
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+  width: min(460px, 88vw);
+}
+
+.cy-sync__panel {
+  width: 100%;
+  border: 1px solid var(--line-1);
+  background: rgba(6, 8, 7, 0.66);
+  backdrop-filter: blur(8px);
+  padding: var(--sp-5);
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: center;
+}
+
+.cy-sync__panel-label {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  color: var(--text-hi);
+}
+
+.cy-sync__pct {
+  font-family: var(--font-mono);
+  font-weight: 200;
+  font-size: clamp(56px, 8vw, 92px);
+  line-height: 1;
+  color: var(--green);
+  text-shadow: 0 0 18px var(--green-glow);
+}
+
+.cy-sync__pct small {
+  font-size: 0.4em;
+  color: var(--green-dim);
+}
+
+.cy-sync__sub {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--grey-2);
+}
+
+.cy-sync__sub b {
+  font-weight: 400;
+  color: var(--text-hi);
+  font-size: 11px;
+}
+
+.cy-tasklist {
+  width: 100%;
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.cy-task {
+  display: grid;
+  grid-template-columns: 1fr 120px 38px;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.cy-task .t-label {
+  color: var(--grey-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cy-task .t-bar {
+  height: 2px;
+  background: var(--grey-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.cy-task .t-bar i {
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+.cy-task .t-pct {
+  text-align: right;
+  color: var(--text-hi);
+}
+
+/* the merged-identity glyph — margin centering, never transform:
+   GSAP's scale tween owns the transform channel */
+.cy-sync__glyph {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  margin-left: -36px;
+  margin-top: -26px;
+  color: var(--green);
+  filter: drop-shadow(0 0 10px rgba(176, 245, 70, 0.5));
+}
+
+@media (max-height: 640px) {
+  .cy-sync__glyph {
+    top: 32%;
+  }
+}
+
+/* No free band between header and checklist on very short viewports —
+   the checklist carries the moment alone. */
+@media (max-height: 520px) {
+  .cy-sync__glyph {
+    display: none;
+  }
+}
+
+/* complete checklist */
+.cy-sync__ok {
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  padding-left: 0.28em;
+  color: var(--green);
+}
+
+.cy-sync__stamp {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--grey-2);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.cy-sync__stamp b {
+  font-weight: 400;
+  color: var(--text-hi);
+  font-size: 12px;
+}
+
+.cy-sync__ready {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.cy-sync__ready .r1 {
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  color: var(--green);
+}
+
+.cy-sync__ready .r2 {
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: var(--grey-2);
+}
+
+/* side columns */
+.cy-sync__side {
+  position: fixed;
+  top: 24%;
+  width: 220px;
+  display: grid;
+  gap: var(--sp-4);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.cy-sync__side--left {
+  left: calc(var(--frame-inset) + 8px);
+}
+
+.cy-sync__side--right {
+  right: calc(var(--frame-inset) + 8px);
+  text-align: right;
+  justify-items: end;
+}
+
+.cy-sync__side .s-title {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--text-hi);
+}
+
+.cy-sync__side .s-title span {
+  color: var(--grey-3);
+}
+
+.cy-sync__side .s-field {
+  display: grid;
+  gap: 2px;
+}
+
+.cy-sync__side .s-label {
+  color: var(--grey-3);
+}
+
+.cy-sync__side .s-value {
+  color: var(--grey-1);
+  font-size: 10px;
+}
+
+.cy-sync__side .s-value.green {
+  color: var(--green);
+}
+
+/* corner HUD */
+.cy-sync__corner {
+  position: fixed;
+  bottom: var(--frame-inset);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--grey-2);
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.cy-sync__corner--bl {
+  left: var(--frame-inset);
+}
+
+.cy-sync__corner--br {
+  right: var(--frame-inset);
+  text-align: right;
+  justify-items: end;
+}
+
+.cy-sync__corner b {
+  font-weight: 400;
+  color: var(--text-hi);
+}
+
+.cy-sync__corner .bars {
+  display: flex;
+  gap: 1px;
+  height: 8px;
+  align-items: flex-end;
+}
+
+.cy-sync__corner .bars i {
+  width: 3px;
+  background: var(--green-dim);
+}
+
+/* cancel */
+.cy-sync__cancel {
+  justify-self: center;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  padding: var(--sp-3) var(--sp-5);
+  color: var(--grey-2);
+  border: 1px solid transparent;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.cy-sync__cancel:hover {
+  color: var(--danger);
+  border-color: rgba(232, 96, 76, 0.35);
+}
+
+@media (max-width: 900px) {
+  .cy-sync__side {
+    display: none;
+  }
+  .cy-sync__corner--br {
+    display: none;
+  }
+}

@@ -1,0 +1,132 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--bg-0);
+  height: 100%;
+  overflow: hidden; /* locked until the protocol completes */
+  scrollbar-color: var(--grey-4) var(--bg-0);
+}
+
+html.is-unlocked {
+  overflow-y: auto;
+}
+
+body {
+  background: var(--bg-0);
+  color: var(--text-hi);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--green);
+  color: var(--bg-0);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 1px solid var(--green);
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Interactive opt-in over pointer-events:none overlay roots */
+.ia {
+  pointer-events: auto;
+}
+
+/* Numbers never jitter */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ————— film grain (static SVG turbulence tile) ————— */
+.cy-grain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-grain);
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ————— blinking cursor ————— */
+.cy-blinker::after {
+  content: '▮';
+  margin-left: 0.4em;
+  color: var(--green);
+  animation: cy-blink 1s steps(1) infinite;
+}
+@keyframes cy-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ————— pulsing live dot ————— */
+.cy-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+}
+.cy-dot--pulse {
+  animation: cy-dot-pulse 2.4s ease-in-out infinite;
+}
+@keyframes cy-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 4px var(--green-glow);
+  }
+  50% {
+    box-shadow: 0 0 10px var(--green-glow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cy-blinker::after,
+  .cy-dot--pulse,
+  .cy-hint__wheel {
+    animation: none;
+  }
+}

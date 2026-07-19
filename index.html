@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#060807" />
+    <meta
+      name="description"
+      content="Cyphernaut Manifesto — two archetypes, one identity. Initiate the protocol."
+    />
+    <title>CYPHERNAUT // MANIFESTO</title>
+    <style>
+      /* Pre-hydration guard: never flash white */
+      html {
+        background: #060807;
+      }
+    </style>
+    <script>
+      // Uncaught-error surface (some embedded consoles miss window errors)
+      window.__errs = [];
+      window.addEventListener('error', function (e) {
+        if (window.__errs.length >= 20) return;
+        var stack = e.error && e.error.stack ? String(e.error.stack).slice(0, 600) : '';
+        window.__errs.push(String(e.message) + ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno + ' :: ' + stack);
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        if (window.__errs.length >= 20) return;
+        window.__errs.push('REJECTION: ' + String((e.reason && e.reason.message) || e.reason));
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

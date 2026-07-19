@@ -1,0 +1,321 @@
+/* ————————————————————————————————————————————————
+   Classified dossier panels — premium military instrumentation,
+   never dashboard widgets. Thin lines, restrained type, layered data.
+   ———————————————————————————————————————————————— */
+
+.cy-dossier {
+  position: fixed;
+  top: calc(var(--frame-inset) + 76px);
+  bottom: calc(var(--frame-inset) + 52px);
+  width: 404px;
+  z-index: var(--z-hud);
+  border: 1px solid var(--line-1);
+  background: var(--bg-1);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cy-dossier--left {
+  left: var(--frame-inset);
+}
+.cy-dossier--right {
+  right: var(--frame-inset);
+}
+
+/* grid construction lines (SVG overlay) */
+.cy-dossier__grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--line-2);
+}
+
+/* travelling scanline */
+.cy-dossier__scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 42px;
+  background: linear-gradient(180deg, transparent, rgba(176, 245, 70, 0.06), transparent);
+  border-bottom: 1px solid rgba(176, 245, 70, 0.18);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.cy-dossier__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--line-2);
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgba(233, 239, 234, 0.02) 3px 4px
+  );
+}
+
+.cy-dossier__title {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--text-hi);
+}
+
+.cy-dossier__title span {
+  color: var(--grey-3);
+  margin-left: var(--sp-2);
+}
+
+.cy-dossier__close {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--grey-2);
+  border: 1px solid transparent;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.cy-dossier__close:hover {
+  color: var(--text-hi);
+  border-color: var(--line-1);
+}
+
+.cy-dossier__body {
+  padding: var(--sp-5);
+  overflow-y: auto;
+  flex: 1;
+  display: grid;
+  gap: var(--sp-6);
+  scrollbar-width: thin;
+}
+
+.cy-dossier__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-5);
+}
+
+.cy-section {
+  display: grid;
+  gap: var(--sp-3);
+  align-content: start;
+}
+
+.cy-section__title {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--green);
+}
+
+.cy-section__title--plain {
+  color: var(--grey-1);
+}
+
+.cy-section__rule {
+  height: 1px;
+  background: var(--line-2);
+  transform-origin: left;
+}
+
+.cy-field {
+  display: grid;
+  gap: 2px;
+}
+
+.cy-field__label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--grey-2);
+}
+
+.cy-field__value {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--text-hi);
+}
+
+.cy-field__value--accent {
+  color: var(--green);
+}
+
+.cy-toolkit {
+  list-style: none;
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.cy-toolkit li {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 1.9;
+  color: var(--green);
+}
+
+.cy-toolkit li::before {
+  content: '> ';
+  color: var(--green-dim);
+}
+
+/* thumbprint */
+.cy-print {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--sp-4);
+  align-items: center;
+}
+
+.cy-print__art {
+  width: 96px;
+  height: 112px;
+  border: 1px solid var(--line-2);
+  display: grid;
+  place-items: center;
+  background: rgba(4, 6, 5, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.cy-print__art svg {
+  color: var(--green);
+  opacity: 0.75;
+}
+
+.cy-print__scanline {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 1px;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+  top: 0;
+  opacity: 0;
+}
+
+.cy-print__meta {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.cy-bar {
+  height: 2px;
+  background: var(--grey-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.cy-bar i {
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+  transform-origin: left;
+}
+
+/* neural map / mission visuals */
+.cy-visual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+
+.cy-visual__cell {
+  border: 1px solid var(--line-2);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(233, 239, 234, 0.025) 3px 4px),
+    radial-gradient(circle at 50% 45%, #131715 0%, #090b0a 75%);
+  aspect-ratio: 4 / 3.4;
+  display: grid;
+  place-items: center;
+  color: var(--grey-2);
+}
+
+.cy-mission {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--sp-4);
+}
+
+.cy-mission__statement {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 2;
+  color: var(--text-hi);
+}
+
+.cy-mission__moon {
+  border: 1px solid var(--line-2);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 108%, #2a2f2b 0%, #141715 55%, #0a0c0b 100%);
+}
+
+.cy-mission__moon::before {
+  content: '';
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  right: 14%;
+  top: 16%;
+  background: radial-gradient(circle at 38% 35%, #3a403b, #171a18 68%);
+}
+
+.cy-mission__moon::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  bottom: 12%;
+  width: 2px;
+  height: 26px;
+  background: linear-gradient(180deg, var(--green), transparent);
+  box-shadow: 0 0 8px var(--green-glow);
+}
+
+.cy-note {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--green);
+}
+
+.cy-meta-rows {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.cy-meta-rows .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--grey-2);
+}
+
+.cy-meta-rows .row b {
+  font-weight: 400;
+  color: var(--grey-1);
+}
+
+@media (max-width: 900px) {
+  .cy-dossier {
+    left: 0 !important;
+    right: 0 !important;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-height: 72vh;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+  .cy-dossier__cols {
+    grid-template-columns: 1fr;
+  }
+}

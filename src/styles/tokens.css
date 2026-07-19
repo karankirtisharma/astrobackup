@@ -1,0 +1,70 @@
+/* ————————————————————————————————————————————————
+   CYPHERNAUT design tokens — the contract for everything.
+   Black is the unknown. White is clarity. Grey is engineering.
+   Green is life — spent only on protocol, scanning, recognition.
+   ———————————————————————————————————————————————— */
+:root {
+  /* Surfaces */
+  --bg-0: #060807;
+  --bg-1: rgba(10, 13, 11, 0.82);
+  --bg-2: #10140f;
+
+  /* Text */
+  --text-hi: #e9efea;
+  --white-pure: #ffffff;
+  --grey-1: #a9b1ab;
+  --grey-2: #8a938c;
+  /* grey-3 carries readable text (nav links, metadata) — kept >=4.5:1 on bg-0 */
+  --grey-3: #7d8680;
+  /* grey-4 is decorative-only, always aria-hidden — never readable text */
+  --grey-4: #2b312c;
+
+  /* The green — refined electric lime */
+  --green: #b0f546;
+  --green-dim: #6e9a2f;
+  --green-tint: rgba(176, 245, 70, 0.08);
+  --green-glow: rgba(176, 245, 70, 0.35);
+
+  /* Lines */
+  --line-1: rgba(233, 239, 234, 0.14);
+  --line-2: rgba(233, 239, 234, 0.07);
+  --line-green: rgba(176, 245, 70, 0.45);
+
+  /* Semantic */
+  --danger: #e8604c;
+
+  /* Type */
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  --font-display: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Space */
+  --frame-inset: 32px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+
+  /* Z-stack */
+  --z-frame: 10;
+  --z-grain: 15;
+  --z-hud: 20;
+  --z-nav: 30;
+  --z-sync: 40;
+  --z-boot: 50;
+}
+
+@media (max-width: 1280px) {
+  :root {
+    --frame-inset: 24px;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --frame-inset: 16px;
+  }
+}

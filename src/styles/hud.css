@@ -1,0 +1,661 @@
+/* ————————————————————————————————————————————————
+   Chrome + HUD. Everything registers to one invisible frame
+   (--frame-inset) — alignment is what reads as "instrument".
+   ———————————————————————————————————————————————— */
+
+.cy-hero {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.cy-canvas-holder {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ————— NAV ————— */
+.cy-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-nav);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-5) var(--frame-inset);
+  pointer-events: none;
+}
+
+.cy-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--text-hi);
+}
+
+.cy-nav__wordmark {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+}
+
+.cy-nav__pill {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(8, 10, 9, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+.cy-nav__link {
+  position: relative;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--grey-3);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 999px;
+  transition: color 0.25s ease, letter-spacing 0.25s ease;
+}
+
+.cy-nav__link:hover {
+  color: var(--grey-1);
+  letter-spacing: 0.14em;
+}
+
+.cy-nav__link[aria-current='page'] {
+  color: var(--text-hi);
+  background: var(--green-tint);
+}
+
+.cy-nav__link[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--green);
+  transform: translateX(-50%);
+}
+
+.cy-nav__right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.cy-nav__secure {
+  text-align: right;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  line-height: 1.6;
+}
+
+.cy-nav__secure-title {
+  color: var(--text-hi);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+
+.cy-nav__secure-sub {
+  color: var(--grey-3);
+}
+
+.cy-nav__burger {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-1);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  gap: 0;
+  transition: border-color 0.25s ease;
+}
+
+.cy-nav__burger:hover {
+  border-color: var(--line-green);
+}
+
+.cy-nav__burger span {
+  display: block;
+  width: 14px;
+  height: 1px;
+  background: var(--text-hi);
+  margin: 2px 0;
+}
+
+/* menu overlay */
+.cy-menu {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-nav) + 1);
+  background: rgba(6, 8, 7, 0.92);
+  backdrop-filter: blur(14px);
+  display: grid;
+  place-items: center;
+}
+
+.cy-menu__list {
+  list-style: none;
+  text-align: center;
+  display: grid;
+  gap: var(--sp-5);
+}
+
+.cy-menu__link {
+  font-size: clamp(22px, 4vw, 34px);
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  color: var(--grey-2);
+  transition: color 0.25s ease;
+}
+
+.cy-menu__link:hover,
+.cy-menu__link[aria-current='page'] {
+  color: var(--text-hi);
+}
+
+.cy-menu__soon {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--grey-4);
+  margin-top: var(--sp-1);
+}
+
+/* ————— FRAME DECORATIONS ————— */
+.cy-frame {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-frame);
+  pointer-events: none;
+}
+
+.cy-frame__corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--grey-4);
+}
+
+.cy-frame__corner--tl {
+  top: calc(var(--frame-inset) + 64px);
+  left: var(--frame-inset);
+  border-right: none;
+  border-bottom: none;
+}
+.cy-frame__corner--tr {
+  top: calc(var(--frame-inset) + 64px);
+  right: var(--frame-inset);
+  border-left: none;
+  border-bottom: none;
+}
+.cy-frame__corner--bl {
+  bottom: var(--frame-inset);
+  left: var(--frame-inset);
+  border-right: none;
+  border-top: none;
+}
+.cy-frame__corner--br {
+  bottom: var(--frame-inset);
+  right: var(--frame-inset);
+  border-left: none;
+  border-top: none;
+}
+
+.cy-frame__tick {
+  position: absolute;
+  color: var(--grey-4);
+  font-size: 10px;
+  transform: translate(-50%, -50%);
+  transition: color 0.15s steps(2);
+}
+
+.cy-frame__tick.is-flash {
+  color: var(--green);
+}
+
+.cy-frame__vtext {
+  position: absolute;
+  writing-mode: vertical-rl;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  color: var(--grey-4);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cy-frame__vtext--left {
+  left: calc(var(--frame-inset) - 4px);
+}
+.cy-frame__vtext--right {
+  right: calc(var(--frame-inset) - 4px);
+}
+
+/* ————— CHARACTER LABELS ————— */
+.cy-charlabel {
+  position: fixed;
+  top: 38%;
+  z-index: var(--z-hud);
+  pointer-events: none;
+  max-width: 260px;
+}
+
+.cy-charlabel--left {
+  left: calc(var(--frame-inset) + 28px);
+  text-align: left;
+}
+
+.cy-charlabel--right {
+  right: calc(var(--frame-inset) + 28px);
+  text-align: right;
+}
+
+.cy-charlabel__name {
+  font-size: clamp(14px, 1.4vw, 20px);
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  color: var(--text-hi);
+  transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+
+.cy-charlabel--hot .cy-charlabel__name {
+  color: var(--green);
+  text-shadow: 0 0 12px var(--green-glow);
+}
+
+.cy-charlabel--right.cy-charlabel--hot .cy-charlabel__name {
+  color: var(--white-pure);
+  text-shadow: 0 0 12px rgba(233, 239, 234, 0.3);
+}
+
+.cy-charlabel__role {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--grey-2);
+  margin-top: var(--sp-2);
+}
+
+.cy-charlabel__tech {
+  margin-top: var(--sp-5);
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.cy-charlabel__techline {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--grey-2);
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.cy-charlabel__techline b {
+  color: var(--green);
+  font-weight: 400;
+}
+
+.cy-charlabel--right .cy-charlabel__techline b {
+  color: var(--grey-1);
+}
+
+/* ————— PROTOCOL BUTTON ————— */
+.cy-protocol {
+  position: fixed;
+  left: 50%;
+  top: 48%;
+  /* the BUTTON's center — not the cluster's — lands on the 3D core */
+  transform: translate(-50%, -43px);
+  z-index: var(--z-hud);
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-5);
+  pointer-events: none;
+}
+
+.cy-protocol__btn {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 1px solid rgba(233, 239, 234, 0.75);
+  background: radial-gradient(circle, rgba(4, 6, 5, 0.55) 40%, rgba(4, 6, 5, 0.1) 100%);
+  display: grid;
+  place-items: center;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+}
+
+.cy-protocol__btn:hover {
+  border-color: var(--line-green);
+  box-shadow: 0 0 18px var(--green-glow);
+}
+
+.cy-protocol__plus {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--text-hi);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), color 0.35s ease;
+}
+
+.cy-protocol__btn:hover .cy-protocol__plus {
+  transform: rotate(45deg);
+  color: var(--green);
+}
+
+.cy-protocol__ring {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 1px solid var(--green);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cy-protocol__caption {
+  text-align: center;
+  font-size: clamp(13px, 1.5vw, 18px);
+  font-weight: 300;
+  letter-spacing: 0.28em;
+  line-height: 1.9;
+  color: var(--text-hi);
+  white-space: nowrap;
+}
+
+.cy-protocol__caption .green {
+  color: var(--green);
+}
+
+.cy-protocol__rule {
+  width: 44px;
+  height: 1px;
+  background: var(--line-1);
+  margin: var(--sp-4) auto 0;
+}
+
+/* ————— SCROLL HINT ————— */
+.cy-hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--frame-inset) + 44px);
+  transform: translateX(-50%);
+  z-index: var(--z-hud);
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-3);
+  pointer-events: none;
+}
+
+.cy-hint__label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--grey-2);
+}
+
+.cy-hint__mouse {
+  color: var(--grey-2);
+}
+
+.cy-hint__wheel {
+  animation: cy-wheel 2s ease-in-out infinite;
+}
+
+@keyframes cy-wheel {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(6px);
+    opacity: 0.2;
+  }
+}
+
+/* ————— SIDE HUD STATS (hover protocol) ————— */
+.cy-sidestats {
+  position: fixed;
+  /* stacked beneath the character label block, per the storyboard */
+  top: calc(38% + 96px);
+  z-index: var(--z-hud);
+  pointer-events: none;
+  display: grid;
+  gap: var(--sp-4);
+  min-width: 150px;
+}
+
+.cy-sidestats--left {
+  left: calc(var(--frame-inset) + 28px);
+}
+.cy-sidestats--right {
+  right: calc(var(--frame-inset) + 28px);
+  text-align: right;
+}
+
+.cy-sidestats .stat-label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--grey-3);
+}
+
+.cy-sidestats .stat-value {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-hi);
+  margin-top: 2px;
+}
+
+.cy-sidestats .stat-value.green {
+  color: var(--green);
+}
+
+.cy-sidestats .stat-bar {
+  height: 2px;
+  background: var(--grey-4);
+  margin-top: var(--sp-2);
+  position: relative;
+  overflow: hidden;
+}
+
+.cy-sidestats .stat-bar i {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: var(--green);
+}
+
+.cy-sidestats--right .stat-bar i {
+  transform-origin: right;
+}
+
+/* ————— STATUS FOOTER ————— */
+.cy-footer {
+  position: fixed;
+  left: var(--frame-inset);
+  right: var(--frame-inset);
+  bottom: var(--frame-inset);
+  z-index: var(--z-hud);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+}
+
+.cy-footer__left {
+  display: grid;
+  gap: var(--sp-1);
+  color: var(--grey-2);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line-2);
+  background: rgba(8, 10, 9, 0.4);
+}
+
+.cy-footer__left .v {
+  color: var(--green);
+}
+
+.cy-footer__left .v--dim {
+  color: var(--green-dim);
+}
+
+.cy-footer__right {
+  text-align: right;
+  color: var(--grey-2);
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: end;
+}
+
+.cy-seg {
+  display: flex;
+  gap: 2px;
+}
+
+.cy-seg i {
+  width: 7px;
+  height: 3px;
+  background: var(--grey-4);
+}
+
+.cy-seg i.on {
+  background: var(--green);
+}
+
+/* ————— BOOT LOADER ————— */
+.cy-boot {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-boot);
+  background: var(--bg-0);
+  display: grid;
+  place-items: center;
+}
+
+.cy-boot__box {
+  width: min(420px, 84vw);
+  display: grid;
+  gap: var(--sp-5);
+}
+
+.cy-boot__logo {
+  color: var(--text-hi);
+  justify-self: start;
+}
+
+.cy-boot__log {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  line-height: 2;
+  color: var(--grey-2);
+  min-height: 120px;
+}
+
+.cy-boot__log .ok {
+  color: var(--green);
+}
+
+.cy-boot__barwrap {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.cy-boot__bar {
+  height: 2px;
+  background: var(--grey-4);
+  overflow: hidden;
+  position: relative;
+}
+
+.cy-boot__bar i {
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+.cy-boot__pct {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--grey-2);
+  display: flex;
+  justify-content: space-between;
+}
+
+.cy-boot__granted {
+  font-size: 13px;
+  letter-spacing: 0.35em;
+  color: var(--green);
+  opacity: 0;
+}
+
+/* ————— scene-conditional visibility ————— */
+/* The ceremony brings its own identity columns and status chrome.
+   Character labels fade via their own GSAP (no inline-style conflicts here);
+   the footer has no inline styles, so a CSS transition carries it — nothing
+   ever snaps. The hint already fades itself through hintFor(). */
+.cy-footer {
+  transition: opacity 0.45s ease, visibility 0s linear 0s;
+}
+
+[data-scene='protocolInitiated'] .cy-footer,
+[data-scene='synchronization'] .cy-footer,
+[data-scene='protocolComplete'] .cy-footer,
+[data-scene='scrollStory'] .cy-footer {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+
+
+@media (max-width: 900px) {
+  .cy-nav__pill {
+    display: none;
+  }
+  .cy-nav__secure {
+    display: none;
+  }
+  .cy-hint {
+    bottom: calc(var(--frame-inset) + 148px);
+  }
+  .cy-charlabel {
+    top: auto;
+  }
+  .cy-charlabel--left {
+    bottom: calc(var(--frame-inset) + 96px);
+  }
+  .cy-charlabel--right {
+    bottom: calc(var(--frame-inset) + 96px);
+  }
+  .cy-charlabel__tech {
+    display: none;
+  }
+  .cy-frame__vtext {
+    display: none;
+  }
+  .cy-footer__right {
+    display: none;
+  }
+  .cy-sidestats {
+    display: none;
+  }
+}
