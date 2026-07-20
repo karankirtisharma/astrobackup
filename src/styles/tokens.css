@@ -1,38 +1,37 @@
 /* ————————————————————————————————————————————————
    CYPHERNAUT design tokens — the contract for everything.
-   White is the unknown: a clean room, over-lit, nothing hidden.
-   Ink is clarity. Grey is engineering.
+   Black is the unknown. White is clarity. Grey is engineering.
    Green is life — spent only on protocol, scanning, recognition.
    ———————————————————————————————————————————————— */
 :root {
   /* Surfaces */
-  --bg-0: #eef0ec;
-  --bg-1: rgba(252, 253, 251, 0.86);
-  --bg-2: #f7f8f5;
+  --bg-0: #060807;
+  --bg-1: rgba(10, 13, 11, 0.82);
+  --bg-2: #10140f;
 
-  /* Text — ink on a lit room */
-  --text-hi: #14181a;
-  --white-pure: #000000;
-  --grey-1: #3d4442;
-  --grey-2: #5a625e;
+  /* Text */
+  --text-hi: #e9efea;
+  --white-pure: #ffffff;
+  --grey-1: #a9b1ab;
+  --grey-2: #8a938c;
   /* grey-3 carries readable text (nav links, metadata) — kept >=4.5:1 on bg-0 */
-  --grey-3: #6a726e;
+  --grey-3: #7d8680;
   /* grey-4 is decorative-only, always aria-hidden — never readable text */
-  --grey-4: #c2c8c3;
+  --grey-4: #2b312c;
 
-  /* The green — the lime, driven deep enough to hold on white */
-  --green: #4d7c0f;
-  --green-dim: #86a94a;
-  --green-tint: rgba(77, 124, 15, 0.1);
-  --green-glow: rgba(77, 124, 15, 0.3);
+  /* The green — refined electric lime */
+  --green: #b0f546;
+  --green-dim: #6e9a2f;
+  --green-tint: rgba(176, 245, 70, 0.08);
+  --green-glow: rgba(176, 245, 70, 0.35);
 
   /* Lines */
-  --line-1: rgba(20, 24, 26, 0.2);
-  --line-2: rgba(20, 24, 26, 0.1);
-  --line-green: rgba(77, 124, 15, 0.5);
+  --line-1: rgba(233, 239, 234, 0.14);
+  --line-2: rgba(233, 239, 234, 0.07);
+  --line-green: rgba(176, 245, 70, 0.45);
 
   /* Semantic */
-  --danger: #c0392b;
+  --danger: #e8604c;
 
   /* Type */
   --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;

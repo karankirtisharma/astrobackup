@@ -29,8 +29,6 @@ const MODELS = [
   { src: 'assets-src/astronaut-src.glb', out: 'public/models/astronaut.glb', ratio: 0.12, fit: 'height', target: 1.8 },
   // A disc platform's silhouette survives far harder simplification.
   { src: 'assets-src/futuristic platform 3d model.glb', out: 'public/models/platform.glb', ratio: 0.05, fit: 'footprint', target: 2.3 },
-  // Normalized identically to the cypherpunk so it registers inside him.
-  { src: 'assets-src/anatomy-src.glb', out: 'public/models/anatomy.glb', ratio: 0.12, fit: 'height', target: 1.8 },
 ];
 
 await MeshoptSimplifier.ready;

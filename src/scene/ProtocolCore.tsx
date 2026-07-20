@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
+  AdditiveBlending,
   BufferGeometry,
   Float32BufferAttribute,
   Group,
@@ -96,6 +97,7 @@ export function ProtocolCore() {
             uniforms={glowUniforms}
             transparent
             depthWrite={false}
+            blending={AdditiveBlending}
           />
         </mesh>
       </group>
@@ -108,6 +110,7 @@ export function ProtocolCore() {
           uniforms={orbitUniforms}
           transparent
           depthWrite={false}
+          blending={AdditiveBlending}
         />
       </points>
 
@@ -120,6 +123,7 @@ export function ProtocolCore() {
           uniforms={shockUniforms}
           transparent
           depthWrite={false}
+          blending={AdditiveBlending}
         />
       </mesh>
     </>

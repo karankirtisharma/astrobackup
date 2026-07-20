@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import {
+  AdditiveBlending,
   BufferGeometry,
   ClampToEdgeWrapping,
   Float32BufferAttribute,
@@ -82,15 +83,8 @@ function Backplate() {
   return (
     <mesh position={[0, h * (FLOOR_LINE - 0.5), -PLATE_Z]} frustumCulled={false} renderOrder={-1000}>
       <planeGeometry args={[w, h]} />
-      {/* Unlit, unfogged and untonemapped: ACES would pull the white room to
-          grey — the render is already graded. */}
-      <meshBasicMaterial
-        map={chamber}
-        fog={false}
-        depthWrite={false}
-        depthTest={false}
-        toneMapped={false}
-      />
+      {/* Unlit and unfogged: the render carries its own light and depth. */}
+      <meshBasicMaterial map={chamber} fog={false} depthWrite={false} depthTest={false} toneMapped />
     </mesh>
   );
 }
@@ -137,6 +131,7 @@ function Dust() {
         uniforms={uniforms}
         transparent
         depthWrite={false}
+        blending={AdditiveBlending}
       />
     </points>
   );

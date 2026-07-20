@@ -27,10 +27,10 @@ export function LightingRig() {
   }, []);
 
   useFrame(() => {
-    keyL.current.intensity = lightProxy.keyL * 34;
-    keyR.current.intensity = lightProxy.keyR * 34;
-    rimL.current.intensity = lightProxy.rimL * 40;
-    rimR.current.intensity = lightProxy.rimR * 40;
+    keyL.current.intensity = lightProxy.keyL * 60;
+    keyR.current.intensity = lightProxy.keyR * 60;
+    rimL.current.intensity = lightProxy.rimL * 55;
+    rimR.current.intensity = lightProxy.rimR * 55;
     core.current.intensity = (lightProxy.core + fxProxy.uEnergy * 2.2) * 4;
     flood.current.intensity = lightProxy.flood * 30;
   });
@@ -39,9 +39,7 @@ export function LightingRig() {
     <>
       <primitive object={targets.l} />
       <primitive object={targets.r} />
-      {/* A white room bounces light from every surface: ambient does most of
-          the modelling now, and the floor bounces back up. */}
-      <hemisphereLight args={['#ffffff', '#c8cec8', 2.4]} />
+      <hemisphereLight args={[COLORS.fill, '#050605', 0.35]} />
 
       {/* Keys: upper-front quarter, slightly warm. The look is shadowless by
           design — pedestal glow and rim separation do the grounding. */}

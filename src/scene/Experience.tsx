@@ -62,14 +62,9 @@ export function Experience() {
       camera={{ fov: BOOT_POSE.fov, near: 0.1, far: 60, position: BOOT_POSE.position }}
       onCreated={({ raycaster, gl, scene, camera }) => {
         if (import.meta.env.DEV) {
-          const w = window as unknown as {
-            __scene?: unknown;
-            __camera?: unknown;
-            __renderer?: unknown;
-          };
+          const w = window as unknown as { __scene?: unknown; __camera?: unknown };
           w.__scene = scene;
           w.__camera = camera;
-          w.__renderer = gl;
         }
         // Pointer events only ever test layer-1 hitboxes — the 260k-triangle
         // character meshes never enter an intersection test.
@@ -85,9 +80,9 @@ export function Experience() {
       }}
     >
       <color attach="background" args={[COLORS.bg]} />
-      {/* Haze in a lit room is bright: fog toward the room colour, starting
-          past the stage so the characters keep their contrast. */}
-      <fog attach="fog" args={[COLORS.bg, 14, 40]} />
+      {/* Far plane sits past the vault plate (z −8.5) so it reads through
+          the haze instead of dissolving into it. */}
+      <fog attach="fog" args={[COLORS.bg, 10, 34]} />
       <PerformanceMonitor onDecline={degrade}>
         <Suspense fallback={null}>
           <CameraRig />
