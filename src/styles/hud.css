@@ -661,3 +661,69 @@
     display: none;
   }
 }
+
+/* ————— ANATOMY SCAN LENS —————
+   The cut is done in the shader; this is only the aperture rim, positioned
+   from the same --scan-* variables so it stays welded to the circle. */
+.cy-scan {
+  position: fixed;
+  left: var(--scan-x, -9999px);
+  top: var(--scan-y, -9999px);
+  width: 0;
+  height: 0;
+  z-index: var(--z-hud);
+  pointer-events: none;
+}
+
+.cy-scan__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--scan-r, 0px) * 2);
+  height: calc(var(--scan-r, 0px) * 2);
+  margin-left: calc(var(--scan-r, 0px) * -1);
+  margin-top: calc(var(--scan-r, 0px) * -1);
+  border-radius: 50%;
+  border: 1px solid var(--line-green);
+  box-shadow: 0 0 0 1px rgba(252, 253, 251, 0.5), inset 0 0 22px rgba(77, 124, 15, 0.18);
+}
+
+/* Crosshair ticks on the rim — instrument, not decoration. */
+.cy-scan__ring::before,
+.cy-scan__ring::after {
+  content: '';
+  position: absolute;
+  background: var(--green);
+  opacity: 0.7;
+}
+
+.cy-scan__ring::before {
+  left: 50%;
+  top: -6px;
+  bottom: -6px;
+  width: 1px;
+  transform: translateX(-50%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0 10px, transparent 10px calc(100% - 10px), #000 calc(100% - 10px));
+  mask-image: linear-gradient(180deg, #000 0 10px, transparent 10px calc(100% - 10px), #000 calc(100% - 10px));
+}
+
+.cy-scan__ring::after {
+  top: 50%;
+  left: -6px;
+  right: -6px;
+  height: 1px;
+  transform: translateY(-50%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0 10px, transparent 10px calc(100% - 10px), #000 calc(100% - 10px));
+  mask-image: linear-gradient(90deg, #000 0 10px, transparent 10px calc(100% - 10px), #000 calc(100% - 10px));
+}
+
+.cy-scan__label {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--scan-r, 0px) + 12px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 8px;
+  letter-spacing: 0.28em;
+  color: var(--green);
+}

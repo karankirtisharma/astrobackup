@@ -1,13 +1,16 @@
-import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
+import { easing } from 'maath';
 import type { Side } from '../state/transitions';
-import { send } from '../state/store';
+import { send, useStore } from '../state/store';
 import { lightProxy } from '../motion/proxies';
 import { CHAR_X, STAND_Y } from '../config/cameraPoses';
 import { useProceduralIdle } from '../hooks/useProceduralIdle';
 import { hoverEnter, hoverLeave } from './hoverIntent';
+import { scanProxy, SCAN_RADIUS_RATIO } from './scanProxy';
+import { createScanUniforms, patchScanMaterial } from './scanMaterial';
 
 // BASE_URL-aware: the site may be served from a subpath (GitHub Pages).
 const MODEL_URL: Record<Side, string> = {
@@ -24,6 +27,10 @@ useGLTF.preload(MODEL_URL.astronaut);
  */
 const MODEL_YAW: Record<Side, number> = { cypherpunk: 0, astronaut: Math.PI / 2 };
 
+/** Only the cypherpunk carries an anatomy layer beneath his skin. */
+const ANATOMY_URL = `${import.meta.env.BASE_URL}models/anatomy.glb`;
+useGLTF.preload(ANATOMY_URL);
+
 /** Breath pivots from the pelvis so feet stay planted. */
 const PIVOT_Y = 0.95;
 
@@ -36,11 +43,16 @@ interface MaterialRecord {
 export function Character({ side }: { side: Side }) {
   const isLeft = side === 'cypherpunk';
   const { scene } = useGLTF(MODEL_URL[side]);
+  const scannable = isLeft;
 
   const root = useRef<Group>(null);
   const breath = useRef<Group>(null);
   const sway = useRef<Group>(null);
   const applied = useRef(-1);
+
+  // One uniform object shared by the body's cutaway and the anatomy's
+  // reveal, so the two halves of the lens can never disagree.
+  const scanUniforms = useMemo(() => createScanUniforms(), []);
 
   const records = useMemo<MaterialRecord[]>(() => {
     const recs: MaterialRecord[] = [];
@@ -63,16 +75,20 @@ export function Character({ side }: { side: Side }) {
         // luminance — reads as an exposure/saturation drop.
         const lum = original.r * 0.299 + original.g * 0.587 + original.b * 0.114;
         const dimmed = new Color(lum, lum, lum).lerp(new Color('#0a0c0a'), 0.55);
+        if (scannable) patchScanMaterial(std, 'cutaway', scanUniforms);
         recs.push({ material: std, original, dimmed });
       }
     });
     return recs;
-  }, [scene]);
+  }, [scene, scannable, scanUniforms]);
 
   useProceduralIdle(
     { root, breath, sway },
     { side: isLeft ? 'left' : 'right', phase: isLeft ? 0 : 2.7, baseY: STAND_Y[side] }
   );
+
+  const anatomy = useAnatomy(scannable, scanUniforms);
+  useScanLens(scannable, scanUniforms, anatomy);
 
   // Apply the conductor-tweened dim value — only while it is actually moving.
   useFrame(() => {
@@ -90,6 +106,10 @@ export function Character({ side }: { side: Side }) {
         <group position-y={-PIVOT_Y}>
           <group ref={sway}>
             <group rotation-y={MODEL_YAW[side]}>
+              {/* Anatomy sits inside the same transform stack as the body,
+                  so it breathes, sways and turns with him — the lens can
+                  never slide off the thing it is scanning. */}
+              {anatomy && <primitive object={anatomy} />}
               <primitive object={scene} />
             </group>
           </group>
@@ -116,4 +136,98 @@ export function Character({ side }: { side: Side }) {
       </mesh>
     </group>
   );
+}
+
+/**
+ * The anatomy beneath the skin. Cloned so the cached GLTF is never mutated,
+ * and patched to exist only inside the lens.
+ */
+function useAnatomy(enabled: boolean, uniforms: ReturnType<typeof createScanUniforms>) {
+  const { scene: raw } = useGLTF(ANATOMY_URL);
+
+  return useMemo(() => {
+    if (!enabled) return null;
+    const clone = raw.clone(true);
+    clone.traverse((obj) => {
+      if (!(obj as Mesh).isMesh) return;
+      const mesh = obj as Mesh;
+      mesh.raycast = () => {};
+      // Draw before the body so the body's cutaway reads as a hole rather
+      // than the anatomy being painted on top of him.
+      mesh.renderOrder = -1;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mesh.material = mats.map((m) => {
+        const cloned = (m as MeshStandardMaterial).clone();
+        cloned.transparent = false;
+        cloned.depthWrite = true;
+        patchScanMaterial(cloned, 'reveal', uniforms);
+        return cloned;
+      }) as unknown as MeshStandardMaterial;
+      if (!Array.isArray(mats) || mats.length === 1) {
+        mesh.material = (mesh.material as unknown as MeshStandardMaterial[])[0];
+      }
+    });
+    clone.visible = false;
+    return clone;
+  }, [raw, enabled, uniforms]);
+}
+
+/**
+ * Drives the lens: the circle eases open while this character holds focus
+ * and closes the moment he loses it, and its centre damps toward the cursor
+ * so the scan trails the hand rather than snapping to it.
+ */
+function useScanLens(
+  enabled: boolean,
+  uniforms: ReturnType<typeof createScanUniforms>,
+  anatomy: Group | null
+) {
+  const gl = useThree((s) => s.gl);
+
+  // The DOM ring lives in CSS pixels; publish the same centre for it.
+  useEffect(() => {
+    if (!enabled) return;
+    return () => {
+      const root = document.documentElement.style;
+      root.setProperty('--scan-r', '0px');
+    };
+  }, [enabled]);
+
+  useFrame(({ pointer, size }, dt) => {
+    if (!enabled) return;
+
+    const scene = useStore.getState().scene;
+    const open = scene === 'hoverCypherpunk' && !useStore.getState().reducedMotion;
+    const dpr = gl.getPixelRatio();
+
+    // Pointer is normalised (-1..1, y up). gl_FragCoord is in drawing-buffer
+    // pixels with y up from the bottom — so this maps directly.
+    const targetX = (pointer.x * 0.5 + 0.5) * size.width * dpr;
+    const targetY = (pointer.y * 0.5 + 0.5) * size.height * dpr;
+
+    if (!scanProxy.primed) {
+      scanProxy.x = targetX;
+      scanProxy.y = targetY;
+      scanProxy.primed = true;
+    }
+
+    // Trail the cursor rather than tracking it rigidly — the lens has mass.
+    easing.damp(scanProxy, 'x', targetX, 0.055, dt);
+    easing.damp(scanProxy, 'y', targetY, 0.055, dt);
+
+    const fullRadius = Math.min(size.width, size.height) * dpr * SCAN_RADIUS_RATIO;
+    easing.damp(scanProxy, 'radius', open ? fullRadius : 0, open ? 0.16 : 0.12, dt);
+
+    uniforms.uScanCenter.value.set(scanProxy.x, scanProxy.y, 0);
+    uniforms.uScanRadius.value = scanProxy.radius;
+
+    // Skip the anatomy's draw calls entirely while the lens is shut.
+    if (anatomy) anatomy.visible = scanProxy.radius > 0.5;
+
+    // Publish to CSS in logical pixels, y measured from the top.
+    const root = document.documentElement.style;
+    root.setProperty('--scan-x', `${(scanProxy.x / dpr).toFixed(1)}px`);
+    root.setProperty('--scan-y', `${(size.height - scanProxy.y / dpr).toFixed(1)}px`);
+    root.setProperty('--scan-r', `${(scanProxy.radius / dpr).toFixed(1)}px`);
+  });
 }

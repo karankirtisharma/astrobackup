@@ -6,6 +6,7 @@ import { StatusFooter } from './chrome/StatusFooter';
 import { CharacterLabel } from './hud/CharacterLabel';
 import { ProtocolButton } from './hud/ProtocolButton';
 import { ScrollHint } from './hud/ScrollHint';
+import { ScanRing } from './hud/ScanRing';
 import { HudStats } from './hud/HudStats';
 import { DossierPanel } from './dossier/DossierPanel';
 import { SyncOverlay } from './overlay/SyncOverlay';
@@ -101,6 +102,7 @@ export function Hud() {
       <CharacterLabel side="astronaut" />
       <ProtocolButton />
       <ScrollHint />
+      <ScanRing />
       <HudStats />
       <StatusFooter />
       <DossierPanel />
