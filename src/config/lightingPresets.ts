@@ -70,10 +70,11 @@ export const LIGHTING_PRESETS: Record<SceneState, LightingPreset> = {
 
 /** Scene palette. */
 export const COLORS = {
-  bg: '#060807',
-  green: '#B0F546',
-  greenDeep: '#5fae32',
-  rimCool: '#cfe8ff',
-  keyWarm: '#fff4e6',
-  fill: '#0c1210',
+  bg: '#eef0ec',
+  green: '#4d7c0f',
+  greenDeep: '#3f6b0c',
+  rimCool: '#dbe9f5',
+  keyWarm: '#fffaf2',
+  /* A lit room bounces: ambient fill carries most of the modelling now. */
+  fill: '#dfe3de',
 } as const;

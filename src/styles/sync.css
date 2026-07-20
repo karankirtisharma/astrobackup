@@ -59,7 +59,7 @@
 .cy-sync__panel {
   width: 100%;
   border: 1px solid var(--line-1);
-  background: rgba(6, 8, 7, 0.66);
+  background: rgba(252, 253, 251, 0.78);
   backdrop-filter: blur(8px);
   padding: var(--sp-5);
   display: grid;
@@ -154,7 +154,7 @@
   margin-left: -36px;
   margin-top: -26px;
   color: var(--green);
-  filter: drop-shadow(0 0 10px rgba(176, 245, 70, 0.5));
+  filter: drop-shadow(0 0 10px rgba(77, 124, 15, 0.35));
 }
 
 @media (max-height: 640px) {
@@ -269,7 +269,7 @@
   bottom: var(--frame-inset);
   font-size: 9px;
   letter-spacing: 0.16em;
-  color: var(--grey-2);
+  color: var(--grey-1);
   display: grid;
   gap: var(--sp-1);
 }
@@ -314,7 +314,7 @@
 
 .cy-sync__cancel:hover {
   color: var(--danger);
-  border-color: rgba(232, 96, 76, 0.35);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 @media (max-width: 900px) {

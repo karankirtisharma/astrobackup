@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
-  AdditiveBlending,
   BufferGeometry,
   Float32BufferAttribute,
   Points,
@@ -86,7 +85,6 @@ export function EnergyBridge() {
         uniforms={uniforms}
         transparent
         depthWrite={false}
-        blending={AdditiveBlending}
       />
     </points>
   );

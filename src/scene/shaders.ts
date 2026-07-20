@@ -24,11 +24,13 @@ export const RING_FRAG = /* glsl */ `
     float ring = smoothstep(0.8, 0.85, r) * (1.0 - smoothstep(0.89, 0.94, r));
     float dash = 0.86 + 0.14 * sin(atan(c.y, c.x) * 28.0 - uTime * 0.35);
     float halo = smoothstep(0.55, 0.87, r) * (1.0 - smoothstep(0.87, 1.0, r)) * 0.14;
-    vec3 cool = vec3(0.92, 0.97, 1.0);
-    vec3 green = vec3(0.69, 0.96, 0.27);
+    // Light theme: ink and deep green painted ONTO the lit floor — an
+    // additive glow would be invisible against white.
+    vec3 cool = vec3(0.14, 0.18, 0.20);
+    vec3 green = vec3(0.30, 0.49, 0.06);
     vec3 col = mix(cool, green, uMix);
-    float a = clamp(ring * dash * (0.35 + uGlow * 0.65) + halo * uGlow, 0.0, 1.0);
-    gl_FragColor = vec4(col * (0.55 + 1.3 * uGlow), a);
+    float a = clamp(ring * dash * (0.30 + uGlow * 0.62) + halo * uGlow * 0.7, 0.0, 0.92);
+    gl_FragColor = vec4(col, a);
   }
 `;
 
@@ -59,8 +61,8 @@ export const SHOCK_FRAG = /* glsl */ `
     float radius = uPulse * 1.05;
     float band = smoothstep(radius - 0.12, radius, r) * (1.0 - smoothstep(radius, radius + 0.04, r));
     float fade = 1.0 - uPulse;
-    vec3 green = vec3(0.69, 0.96, 0.27);
-    gl_FragColor = vec4(green * 2.0, band * fade * 0.8);
+    vec3 green = vec3(0.30, 0.49, 0.06);
+    gl_FragColor = vec4(green, band * fade * 0.85);
   }
 `;
 
@@ -76,9 +78,9 @@ export const CORE_FRAG = /* glsl */ `
     float breathe = 1.0 + 0.06 * sin(uTime * 1.3);
     float disc = 1.0 - smoothstep(0.0, 0.55 * breathe, r);
     float rim = smoothstep(0.42, 0.5, r) * (1.0 - smoothstep(0.5, 0.62, r));
-    vec3 green = vec3(0.69, 0.96, 0.27);
-    vec3 col = green * (disc * disc * 0.7 + rim * 1.6) * (0.25 + uIntensity * 0.5 + uEnergy);
-    float a = clamp((disc * 0.55 + rim) * (0.15 + uIntensity * 0.35 + uEnergy * 0.6), 0.0, 1.0);
+    vec3 green = vec3(0.30, 0.49, 0.06);
+    vec3 col = mix(green, vec3(0.18, 0.30, 0.03), rim);
+    float a = clamp((disc * 0.5 + rim * 1.2) * (0.2 + uIntensity * 0.4 + uEnergy * 0.7), 0.0, 0.95);
     gl_FragColor = vec4(col, a);
   }
 `;
@@ -143,12 +145,12 @@ export const BRIDGE_FRAG = /* glsl */ `
     float d = length(gl_PointCoord - 0.5);
     float glow = smoothstep(0.5, 0.05, d);
     glow *= glow;
-    vec3 deep = vec3(0.06, 0.42, 0.2);
-    vec3 hot = vec3(0.72, 1.0, 0.55);
-    vec3 col = mix(deep, hot, glow * vIntensity);
-    float a = glow * vIntensity * vEnvelope;
+    vec3 pale = vec3(0.55, 0.70, 0.36);
+    vec3 deep = vec3(0.24, 0.42, 0.03);
+    vec3 col = mix(pale, deep, glow * vIntensity);
+    float a = glow * vIntensity * vEnvelope * 0.95;
     if (a < 0.01) discard;
-    gl_FragColor = vec4(col * (1.0 + vIntensity), a);
+    gl_FragColor = vec4(col, a);
   }
 `;
 
@@ -178,7 +180,7 @@ export const ORBIT_FRAG = /* glsl */ `
     float d = length(gl_PointCoord - 0.5);
     float glow = smoothstep(0.5, 0.1, d);
     if (glow * vAlpha < 0.01) discard;
-    gl_FragColor = vec4(vec3(0.69, 0.96, 0.27) * 1.4, glow * vAlpha);
+    gl_FragColor = vec4(vec3(0.30, 0.49, 0.06), glow * vAlpha * 0.9);
   }
 `;
 
@@ -207,6 +209,6 @@ export const DUST_FRAG = /* glsl */ `
     float d = length(gl_PointCoord - 0.5);
     float glow = smoothstep(0.5, 0.15, d);
     if (glow * vAlpha < 0.01) discard;
-    gl_FragColor = vec4(vec3(0.75, 0.8, 0.76), glow * vAlpha);
+    gl_FragColor = vec4(vec3(0.22, 0.26, 0.24), glow * vAlpha);
   }
 `;

@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-import { AdditiveBlending, Mesh, MeshStandardMaterial, ShaderMaterial } from 'three';
+import { Mesh, MeshStandardMaterial, ShaderMaterial } from 'three';
 import { PLANE_VERT, RING_FRAG, CONTACT_FRAG } from './shaders';
 import { lightProxy, fxProxy } from '../motion/proxies';
 import { CHAR_X } from '../config/cameraPoses';
@@ -87,7 +87,6 @@ export function Pedestal({ side }: { side: 'left' | 'right' }) {
           uniforms={uniforms}
           transparent
           depthWrite={false}
-          blending={AdditiveBlending}
         />
       </mesh>
     </group>

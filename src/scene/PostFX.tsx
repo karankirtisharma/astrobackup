@@ -39,21 +39,22 @@ function PostFXInner() {
     }
   });
 
+  // Light theme: the whole frame sits above any useful bloom threshold, so
+  // threshold-bloom would just wash the room out — it's gone. The vignette
+  // stays, gently, as a lens shade rather than darkness.
   if (tier === 'low') {
     return (
       <EffectComposer multisampling={0} resolutionScale={0.6}>
-        <Bloom mipmapBlur intensity={0.7} luminanceThreshold={0.7} luminanceSmoothing={0.3} />
-        <Vignette offset={0.28} darkness={0.82} />
+        <Vignette offset={0.32} darkness={0.3} />
       </EffectComposer>
     );
   }
 
   return (
     <EffectComposer multisampling={0}>
-      <Bloom mipmapBlur intensity={0.85} luminanceThreshold={0.68} luminanceSmoothing={0.3} />
       <primitive object={caEffect} />
-      <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.07} />
-      <Vignette offset={0.28} darkness={0.82} />
+      <Noise premultiply blendFunction={BlendFunction.MULTIPLY} opacity={0.035} />
+      <Vignette offset={0.32} darkness={0.34} />
     </EffectComposer>
   );
 }

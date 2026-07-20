@@ -54,7 +54,7 @@
   border: 1px solid var(--line-2);
   border-radius: 999px;
   padding: var(--sp-2) var(--sp-3);
-  background: rgba(8, 10, 9, 0.55);
+  background: rgba(252, 253, 251, 0.62);
   backdrop-filter: blur(10px);
 }
 
@@ -145,7 +145,7 @@
   position: fixed;
   inset: 0;
   z-index: calc(var(--z-nav) + 1);
-  background: rgba(6, 8, 7, 0.92);
+  background: rgba(246, 248, 244, 0.94);
   backdrop-filter: blur(14px);
   display: grid;
   place-items: center;
@@ -282,13 +282,13 @@
 
 .cy-charlabel--right.cy-charlabel--hot .cy-charlabel__name {
   color: var(--white-pure);
-  text-shadow: 0 0 12px rgba(233, 239, 234, 0.3);
+  text-shadow: 0 0 14px rgba(20, 24, 26, 0.18);
 }
 
 .cy-charlabel__role {
   font-size: 11px;
   letter-spacing: 0.18em;
-  color: var(--grey-2);
+  color: var(--grey-1);
   margin-top: var(--sp-2);
 }
 
@@ -336,8 +336,8 @@
   width: 86px;
   height: 86px;
   border-radius: 50%;
-  border: 1px solid rgba(233, 239, 234, 0.75);
-  background: radial-gradient(circle, rgba(4, 6, 5, 0.55) 40%, rgba(4, 6, 5, 0.1) 100%);
+  border: 1px solid rgba(20, 24, 26, 0.55);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 40%, rgba(255, 255, 255, 0.25) 100%);
   display: grid;
   place-items: center;
   transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
@@ -505,10 +505,10 @@
 .cy-footer__left {
   display: grid;
   gap: var(--sp-1);
-  color: var(--grey-2);
+  color: var(--grey-1);
   padding: var(--sp-3) var(--sp-4);
   border: 1px solid var(--line-2);
-  background: rgba(8, 10, 9, 0.4);
+  background: rgba(252, 253, 251, 0.78);
 }
 
 .cy-footer__left .v {
@@ -521,7 +521,7 @@
 
 .cy-footer__right {
   text-align: right;
-  color: var(--grey-2);
+  color: var(--grey-1);
   display: grid;
   gap: var(--sp-2);
   justify-items: end;

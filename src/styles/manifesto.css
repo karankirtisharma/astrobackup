@@ -6,7 +6,7 @@
 .cy-manifesto {
   position: relative;
   z-index: 5;
-  background: linear-gradient(180deg, rgba(6, 8, 7, 0) 0%, var(--bg-0) 9%, var(--bg-0) 100%);
+  background: linear-gradient(180deg, rgba(238, 240, 236, 0) 0%, var(--bg-0) 9%, var(--bg-0) 100%);
   padding: 22vh var(--frame-inset) 18vh;
   display: grid;
   justify-items: center;

@@ -80,9 +80,9 @@ export function Experience() {
       }}
     >
       <color attach="background" args={[COLORS.bg]} />
-      {/* Far plane sits past the vault plate (z −8.5) so it reads through
-          the haze instead of dissolving into it. */}
-      <fog attach="fog" args={[COLORS.bg, 10, 34]} />
+      {/* Haze in a lit room is bright: fog toward the room colour, starting
+          past the stage so the characters keep their contrast. */}
+      <fog attach="fog" args={[COLORS.bg, 14, 40]} />
       <PerformanceMonitor onDecline={degrade}>
         <Suspense fallback={null}>
           <CameraRig />
