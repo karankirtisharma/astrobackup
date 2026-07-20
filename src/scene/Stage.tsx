@@ -1,91 +1,96 @@
 import { useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { useTexture } from '@react-three/drei';
-import {
-  AdditiveBlending,
-  BufferGeometry,
-  ClampToEdgeWrapping,
-  Float32BufferAttribute,
-  MathUtils,
-  ShaderMaterial,
-  SRGBColorSpace,
-} from 'three';
+import { useFrame } from '@react-three/fiber';
+import { MeshReflectorMaterial } from '@react-three/drei';
+import { AdditiveBlending, BufferGeometry, Float32BufferAttribute, ShaderMaterial } from 'three';
 import { DUST_VERT, DUST_FRAG } from './shaders';
-
-const CHAMBER_URL = `${import.meta.env.BASE_URL}env/chamber.webp`;
-useTexture.preload(CHAMBER_URL);
-
-const CHAMBER_ASPECT = 1857 / 847;
-/**
- * Where the chamber's back wall meets its floor, as a fraction down the
- * image (measured from its luminance ramp). Placed at world y=0, so the
- * render's floor line IS the ground plane and its painted floor recedes to
- * the same horizon the platforms stand on.
- */
-const FLOOR_LINE = 0.6;
-/** How far behind the stage the chamber stands. Drives parallax strength. */
-const PLATE_Z = 11;
-
-/** Envelope of the authored camera poses, for sizing that always covers. */
-const POSE_MAX_Z = 6.4;
-const POSE_MAX_FOV = 42;
-/**
- * Lateral/vertical camera excursion the plate must still cover: pose spread
- * (±0.5) + mouse parallax (±0.3) + idle drift (±0.11). Kept tight, because
- * every unit of margin is a unit of the render cropped away.
- */
-const CAM_MARGIN = 1;
+import { useStore } from '../state/store';
+import { DEBUG_FLAGS } from '../debugFlags';
 
 /**
- * Size the plate so every authored camera pose stays inside it at this
- * aspect — coverage is guaranteed up front, so the plate can then sit still
- * in world space and simply be looked at. Depends only on the aspect ratio,
- * so it never breathes while the camera moves.
- */
-function plateSize(aspect: number) {
-  const fit = MathUtils.clamp(1.45 / aspect, 1, 1.9);
-  const fovDeg = POSE_MAX_FOV + (fit - 1) * 14;
-  const dist = PLATE_Z + POSE_MAX_Z * fit;
-  const halfH = dist * Math.tan(MathUtils.degToRad(fovDeg) / 2) + CAM_MARGIN;
-  const halfW = halfH * aspect + CAM_MARGIN;
-  return halfW / halfH > CHAMBER_ASPECT
-    ? { w: halfW * 2, h: (halfW * 2) / CHAMBER_ASPECT }
-    : { w: halfH * 2 * CHAMBER_ASPECT, h: halfH * 2 };
-}
-
-/**
- * The chamber is the render itself, standing in world space: the camera
- * moves against it, so dollies and hover shifts produce real parallax
- * instead of a backdrop glued to the lens. There is no 3D floor slab — the
- * render's own floor is the ground.
+ * The architectural void: a reflective slab, a fogged backdrop cylinder with
+ * faint vertical slits, and drifting dust. The environment frames the
+ * protagonists — it never competes with them.
  */
 export function Stage() {
+  const tier = useStore((s) => s.tier);
+
   return (
     <>
-      <Backplate />
+      <Floor tier={tier} />
+      <Backdrop />
       <Dust />
     </>
   );
 }
 
-function Backplate() {
-  const chamber = useTexture(CHAMBER_URL);
-  chamber.colorSpace = SRGBColorSpace;
-  chamber.wrapS = ClampToEdgeWrapping;
-  chamber.wrapT = ClampToEdgeWrapping;
-  chamber.needsUpdate = true;
+function Floor({ tier }: { tier: 'high' | 'mid' | 'low' }) {
+  // The reflector renders the whole scene into an offscreen FBO each frame —
+  // reserved for the high tier, at a resolution the blur makes equivalent.
+  // Known cost: drei's internal render targets are not disposed if the
+  // reflector unmounts on a tier downgrade (~8MB GPU, at most once per
+  // session) — accepted over reaching into drei internals.
+  if (tier !== 'high' || DEBUG_FLAGS.noReflect) {
+    return (
+      <mesh rotation-x={-Math.PI / 2} position-y={0}>
+        <planeGeometry args={[44, 44]} />
+        <meshStandardMaterial color="#0a0c0b" roughness={0.85} metalness={0.4} />
+      </mesh>
+    );
+  }
+  return (
+    <mesh rotation-x={-Math.PI / 2} position-y={0}>
+      <planeGeometry args={[44, 44]} />
+      <MeshReflectorMaterial
+        resolution={512}
+        blur={[260, 80]}
+        mixBlur={1}
+        mixStrength={2.2}
+        depthScale={0.7}
+        minDepthThreshold={0.35}
+        maxDepthThreshold={1.2}
+        roughness={0.85}
+        color="#0a0c0b"
+        metalness={0.45}
+        mirror={0.55}
+      />
+    </mesh>
+  );
+}
 
-  // Aspect-driven only — the plate holds still while the camera moves, which
-  // is what makes the parallax read.
-  const { width, height } = useThree((s) => s.size);
-  const { w, h } = useMemo(() => plateSize(width / Math.max(height, 1)), [width, height]);
+function Backdrop() {
+  const slits = useMemo(() => {
+    const items: { pos: [number, number, number]; h: number }[] = [];
+    for (let i = 0; i < 9; i++) {
+      const ang = Math.PI * (0.65 + (i / 8) * 1.7); // back half arc
+      const r = 11 + (i % 3) * 1.6;
+      items.push({
+        pos: [Math.cos(ang) * r, 2.6 + (i % 2) * 0.9, Math.sin(ang) * r - 2],
+        h: 4.5 + (i % 3) * 1.4,
+      });
+    }
+    return items;
+  }, []);
 
   return (
-    <mesh position={[0, h * (FLOOR_LINE - 0.5), -PLATE_Z]} frustumCulled={false} renderOrder={-1000}>
-      <planeGeometry args={[w, h]} />
-      {/* Unlit and unfogged: the render carries its own light and depth. */}
-      <meshBasicMaterial map={chamber} fog={false} depthWrite={false} depthTest={false} toneMapped />
-    </mesh>
+    <>
+      {/* The void itself — fog does the compositional work. */}
+      <mesh position={[0, 5, -2]}>
+        <cylinderGeometry args={[15, 15, 16, 40, 1, true]} />
+        <meshStandardMaterial color="#070908" roughness={1} metalness={0} side={1} />
+      </mesh>
+      {/* Faint vertical slits, eaten by fog at varying depths. */}
+      {slits.map((s, i) => (
+        <mesh key={i} position={s.pos}>
+          <boxGeometry args={[0.045, s.h, 0.045]} />
+          <meshStandardMaterial
+            color="#0c110e"
+            emissive="#243528"
+            emissiveIntensity={0.7}
+            roughness={1}
+          />
+        </mesh>
+      ))}
+    </>
   );
 }
 
