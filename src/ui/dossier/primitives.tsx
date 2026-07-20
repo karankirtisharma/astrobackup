@@ -163,6 +163,50 @@ export function FingerprintArt({ variant }: { variant: 'left' | 'right' }) {
   );
 }
 
+/* ————— Bio-metric head: anatomical profile, contour lines only ————— */
+
+export function HeadArt() {
+  return (
+    <svg width="92" height="112" viewBox="0 0 92 112" fill="none" data-anim="draw" aria-hidden="true">
+      {/* skull + jaw profile, facing right */}
+      <path
+        d="M 30 104 C 28 92 26 86 20 79 C 12 69 10 58 13 47 C 17 31 30 20 46 20 C 62 20 74 31 76 46 C 77 55 74 60 70 62 C 67 63 66 65 67 68 C 68 72 66 74 62 74 C 60 74 59 76 59 79 C 60 86 56 90 50 90 C 47 90 46 92 46 95 L 46 104"
+        stroke="currentColor"
+        strokeWidth="0.9"
+        pathLength={1}
+      />
+      {/* cranial contour shells */}
+      <path d="M 18 52 C 22 36 33 27 46 27 C 59 27 69 36 71 49" stroke="currentColor" strokeWidth="0.5" pathLength={1} />
+      <path d="M 23 55 C 26 42 35 34 46 34 C 57 34 65 42 66 52" stroke="currentColor" strokeWidth="0.4" pathLength={1} />
+      {/* brow, orbit, nasal, mouth */}
+      <path d="M 56 55 C 60 53 65 54 68 57" stroke="currentColor" strokeWidth="0.5" pathLength={1} />
+      <path d="M 60 63 C 63 62 66 63 67 65" stroke="currentColor" strokeWidth="0.4" pathLength={1} />
+      <path d="M 55 80 C 58 79 61 80 62 81" stroke="currentColor" strokeWidth="0.4" pathLength={1} />
+      {/* cervical column */}
+      <path d="M 34 90 C 33 96 33 100 34 104" stroke="currentColor" strokeWidth="0.4" pathLength={1} />
+      {/* measurement ticks */}
+      <path d="M 8 40 L 12 40 M 8 62 L 12 62 M 8 84 L 12 84" stroke="currentColor" strokeWidth="0.5" pathLength={1} />
+    </svg>
+  );
+}
+
+/* ————— Signature: a single hand-drawn stroke ————— */
+
+export function SignatureArt() {
+  return (
+    <svg width="96" height="30" viewBox="0 0 96 30" fill="none" data-anim="draw" aria-hidden="true">
+      <path
+        d="M 4 22 C 10 8 14 4 17 6 C 20 8 16 18 14 22 C 12 26 15 27 19 23 C 23 19 26 10 29 8 C 32 6 32 14 30 19 C 29 23 32 24 36 20 C 40 16 43 9 47 9 C 50 9 49 16 47 20 C 45 24 48 25 53 21 C 58 17 62 8 67 9 C 71 10 68 18 66 21 C 64 25 68 25 73 20 C 78 15 84 12 90 13"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+        pathLength={1}
+      />
+      <path d="M 20 27 C 38 25 68 25 84 27" stroke="currentColor" strokeWidth="0.5" pathLength={1} />
+    </svg>
+  );
+}
+
 /* ————— Neural map placeholder art (contours, not kitsch) ————— */
 
 export function BrainArt({ variant }: { variant: 0 | 1 }) {

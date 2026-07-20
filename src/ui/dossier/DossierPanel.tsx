@@ -1,25 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import type { MouseEvent } from 'react';
+import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useStore, send } from '../../state/store';
 import { DOSSIERS } from '../../config/content';
 import { DUR } from '../../motion/motionConfig';
-import { Logo } from '../chrome/Logo';
-import {
-  TypeLabel,
-  CountUp,
-  Bar,
-  FieldRow,
-  SectionTitle,
-  Fade,
-  FingerprintArt,
-  BrainArt,
-} from './primitives';
 import { buildPanelTimeline } from './panelTimeline';
+import { BentoBody } from './BentoBody';
+import { AstronautBody } from './AstronautBody';
 
 /**
  * The classified dossier. Mounted for the whole panel lifecycle; the FSM's
- * phase drives it: entering/active → play, exiting → reversed construction,
- * PANEL_CLOSED on reverse completion returns the world to idle.
+ * phase drives it: entering/active → build, exiting → wind-down, and
+ * PANEL_CLOSED on its completion returns the world to idle.
+ *
+ * Both sides render as instrument boards (BentoBody / AstronautBody). The
+ * board carries no close button: dismissal is a click anywhere off a card,
+ * or Escape.
  */
 export function DossierPanel() {
   const scene = useStore((s) => s.scene);
@@ -27,6 +24,7 @@ export function DossierPanel() {
   const side = useStore((s) => s.panelSide);
   const root = useRef<HTMLDivElement>(null);
   const tl = useRef<gsap.core.Timeline | null>(null);
+  const exiting = useRef(false);
 
   const open = scene === 'cypherpunkPanel' || scene === 'astronautPanel';
 
@@ -38,7 +36,7 @@ export function DossierPanel() {
       tl.current?.kill();
       tl.current = null;
       if (!open || !root.current) return;
-      tl.current = buildPanelTimeline(root.current, () => send({ type: 'PANEL_CLOSED' }));
+      tl.current = buildPanelTimeline(root.current);
       tl.current.play();
     },
     { dependencies: [open, side], scope: root, revertOnUpdate: true }
@@ -53,163 +51,119 @@ export function DossierPanel() {
     };
   }, [open, side]);
 
-  useEffect(() => {
-    if (open && phase === 'exiting' && tl.current) {
-      // Closing mid-open reverses from the current playhead — by design.
-      tl.current.timeScale(DUR.closeSpeedup).reverse();
+  /**
+   * Dismissal is NOT a reversed construction, and deliberately NOT driven by
+   * an effect.
+   *
+   * Reversing the build un-staggers dozens of nodes and measured ~2.4s — an
+   * age once the visitor has decided to leave, and unacceptable now that a
+   * stray click off a card is the dismissal. Same policy the conductor
+   * applies to CANCEL_PROTOCOL: kill the long timeline, play a short
+   * purpose-built wind-down.
+   *
+   * Running it imperatively rather than from a `phase === 'exiting'` effect
+   * matters: that effect re-entered on unrelated re-renders and its cleanup
+   * killed the in-flight tween, so the close landed anywhere between 45ms and
+   * a full second depending on render timing. One call, one wind-down.
+   */
+  const dismiss = useCallback(() => {
+    const el = root.current;
+    if (!el || exiting.current) return;
+    exiting.current = true;
+
+    send({ type: 'CLOSE_PANEL' });
+    tl.current?.kill();
+    tl.current = null;
+
+    const reduced = useStore.getState().reducedMotion;
+    const done = () => {
+      exiting.current = false;
+      send({ type: 'PANEL_CLOSED' });
+    };
+
+    if (reduced) {
+      gsap.to(el, { autoAlpha: 0, duration: 0.1, overwrite: 'auto', onComplete: done });
+      return;
     }
-  }, [open, phase]);
+
+    // Rollback: the board retracts in the order it was built, last pane
+    // first. A compressed echo of the construction rather than a replay of
+    // it — the whole retraction lands inside DUR.panelExit's budget.
+    const out = gsap.timeline({ onComplete: done });
+    out.to(el.querySelectorAll('.cy-card'), {
+      autoAlpha: 0,
+      y: -10,
+      scale: 0.985,
+      duration: DUR.panelExit,
+      ease: 'power2.in',
+      overwrite: 'auto',
+      stagger: { each: 0.028, from: 'end' },
+    });
+    out.to(el, { autoAlpha: 0, duration: 0.1, overwrite: 'auto' }, '>-0.06');
+  }, []);
+
+  // The board has no close button, so Escape is the keyboard route out.
+  // Click-anywhere-off-a-card alone would strand keyboard-only users.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, dismiss]);
 
   if (!open || !side) return null;
 
   const d = DOSSIERS[side];
   const isLeft = side === 'cypherpunk';
 
+  /** Anything that isn't a card is dead space — dismiss. */
+  const dismissOffCard = (e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.cy-card')) return;
+    dismiss();
+  };
+
   return (
-    <section
-      ref={root}
-      className={`cy-dossier ia ${isLeft ? 'cy-dossier--left' : 'cy-dossier--right'}`}
-      role="region"
-      aria-label={`${d.title} dossier`}
-      style={{ opacity: 0 }}
-    >
-      {/* construction grid */}
-      <svg className="cy-dossier__grid" width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" aria-hidden="true">
-        <line x1="0" y1="18" x2="100" y2="18" stroke="currentColor" strokeWidth="0.2" pathLength={1} />
-        <line x1="0" y1="52" x2="100" y2="52" stroke="currentColor" strokeWidth="0.2" pathLength={1} />
-        <line x1="0" y1="80" x2="100" y2="80" stroke="currentColor" strokeWidth="0.2" pathLength={1} />
-        <line x1="50" y1="0" x2="50" y2="100" stroke="currentColor" strokeWidth="0.2" pathLength={1} />
-      </svg>
-      <div className="cy-dossier__scan" aria-hidden="true" />
-
-      <header className="cy-dossier__head">
-        <span style={{ color: 'var(--grey-1)' }}>
-          <Logo size={18} />
-        </span>
-        <h2 className="cy-dossier__title">
-          {d.title}
-          <span>{d.subtitle}</span>
-        </h2>
-        <button
-          className="cy-dossier__close"
-          aria-label="Close dossier"
-          disabled={phase === 'exiting'}
-          onClick={() => send({ type: 'CLOSE_PANEL' })}
-        >
-          ✕
-        </button>
-      </header>
-
-      <div className="cy-dossier__body">
-        <div className="cy-dossier__cols">
-          <div className="cy-section">
-            <SectionTitle text="IDENTITY CARD" />
-            {d.identity.map((f) => (
-              <FieldRow key={f.label} {...f} />
-            ))}
-          </div>
-          <div className="cy-section">
-            <SectionTitle text={d.attributesTitle} plain />
-            {d.attributes.map((f) => (
-              <FieldRow key={f.label} {...f} />
-            ))}
-            {d.toolkitTitle && (
-              <>
-                <SectionTitle text={d.toolkitTitle} plain />
-                <ul className="cy-toolkit">
-                  {d.toolkit.map((t) => (
-                    <li key={t} data-anim="fade">
-                      <TypeLabel text={t} />
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            {d.extra.map((f) => (
-              <FieldRow key={f.label} {...f} />
-            ))}
-          </div>
+    <>
+      {/* Catches clicks outside the board. Sits below the panel and below the
+          nav, so the nav stays usable while a dossier is open. Transparent —
+          the dimming is the panel's job, not this layer's. */}
+      <div className="cy-dossier__dismiss" onClick={dismissOffCard} aria-hidden="true" />
+      <section
+        ref={root}
+        onClick={dismissOffCard}
+        className={`cy-dossier cy-dossier--bento ia ${
+          isLeft ? 'cy-dossier--left' : 'cy-dossier--right'
+        }`}
+        role="region"
+        aria-label={`${d.title} dossier`}
+        style={{ opacity: 0 }}
+      >
+        <div className="cy-dossier__body">
+          <button
+            className="cy-back ia"
+            data-anim="fade"
+            aria-label="Close dossier"
+            onClick={(e) => {
+              e.stopPropagation();
+              dismiss();
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <path
+                d="M8 1.5 L3 6.5 L8 11.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>BACK</span>
+          </button>
+          {isLeft ? <BentoBody /> : <AstronautBody />}
         </div>
-
-        <div className="cy-section">
-          <SectionTitle text={d.thumbprint.sideLabel} plain />
-          <div className="cy-print">
-            <Fade>
-              <div className="cy-print__art">
-                <FingerprintArt variant={isLeft ? 'left' : 'right'} />
-                <span className="cy-print__scanline" data-anim="scanline" />
-              </div>
-            </Fade>
-            <div className="cy-print__meta">
-              <div className="cy-field" data-anim="fade">
-                <span className="cy-field__label">HASH</span>
-                <span className="cy-field__value num">
-                  <TypeLabel text={d.thumbprint.hash} />
-                </span>
-              </div>
-              <div className="cy-field" data-anim="fade">
-                <span className="cy-field__label">MATCH</span>
-                <span className="cy-field__value cy-field__value--accent num">
-                  <CountUp to={d.thumbprint.match} decimals={1} suffix="%" />
-                </span>
-              </div>
-              <Bar value={d.thumbprint.match / 100} />
-            </div>
-          </div>
-        </div>
-
-        <div className="cy-section">
-          <SectionTitle text={d.moduleTitle} plain />
-          {d.visual === 'neural' ? (
-            <>
-              <div className="cy-visual">
-                <Fade>
-                  <div className="cy-visual__cell">
-                    <BrainArt variant={0} />
-                  </div>
-                </Fade>
-                <Fade>
-                  <div className="cy-visual__cell">
-                    <BrainArt variant={1} />
-                  </div>
-                </Fade>
-              </div>
-              <div className="cy-meta-rows">
-                {d.moduleRows.map((r) => (
-                  <div className="row" key={r.label} data-anim="fade">
-                    <span>{r.label}</span>
-                    <b>{r.value}</b>
-                  </div>
-                ))}
-              </div>
-              {d.moduleNote && (
-                <Fade>
-                  <div className="cy-note">{d.moduleNote}</div>
-                </Fade>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="cy-mission">
-                <div className="cy-mission__statement" data-anim="fade">
-                  <TypeLabel text={d.missionStatement ?? ''} />
-                </div>
-                <Fade>
-                  <div className="cy-mission__moon" />
-                </Fade>
-              </div>
-              <div className="cy-meta-rows">
-                {d.moduleRows.map((r) => (
-                  <div className="row" key={r.label} data-anim="fade">
-                    <span>{r.label}</span>
-                    <b>{r.value}</b>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

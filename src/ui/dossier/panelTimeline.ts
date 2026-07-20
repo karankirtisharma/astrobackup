@@ -7,17 +7,25 @@ import { useStore } from '../../state/store';
  * stages: settle → grid draws itself → scanline → titles mask-reveal → rows
  * type themselves → bars flow → fingerprint scans → visuals resolve.
  *
- * Close is literally `tl.timeScale(1.35).reverse()` — reversed construction.
+ * Build only. Dismissal is owned by DossierPanel, which kills this timeline
+ * and plays a short wind-down rather than reversing the construction.
  */
-export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsap.core.Timeline {
+export function buildPanelTimeline(root: HTMLElement): gsap.core.Timeline {
   const reduced = useStore.getState().reducedMotion;
 
-  const tl = gsap.timeline({
-    paused: true,
-    onReverseComplete: onClosed,
-  });
+  const tl = gsap.timeline({ paused: true });
 
   if (reduced) {
+    // Counter nodes are rendered EMPTY — the timeline normally fills them.
+    // With the timeline skipped, write the final values directly or they stay
+    // blank to sighted users (the value would survive only for AT).
+    root.querySelectorAll<HTMLElement>('[data-anim="count"]').forEach((el) => {
+      const target = el.querySelector<HTMLElement>('.count-anim');
+      if (!target) return;
+      const to = parseFloat(el.dataset.to ?? '0');
+      const decimals = parseInt(el.dataset.decimals ?? '0', 10);
+      target.textContent = to.toFixed(decimals) + (el.dataset.suffix ?? '');
+    });
     tl.fromTo(root, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.22, ease: 'power1.out' });
     return tl;
   }
@@ -56,6 +64,16 @@ export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsa
   let pos = 0.85;
   const items = root.querySelectorAll<HTMLElement>('.cy-dossier__body [data-anim]');
 
+  // Density compensation: the boards differ in module count, and a fixed
+  // per-item stagger would make the dense one crawl (and its reversed close
+  // outlast the visitor's patience). Tighten the step as the count grows so
+  // total construction time stays bounded — pacing, not choreography, changes.
+  const density = Math.min(1, 30 / Math.max(items.length, 1));
+  /** Advance the playhead by a density-scaled step. */
+  const step = (n: number) => {
+    pos += n * density;
+  };
+
   items.forEach((el) => {
     const kind = el.dataset.anim;
     switch (kind) {
@@ -66,7 +84,7 @@ export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsa
           { clipPath: 'inset(0 0 -8% 0)', y: 0, opacity: 1, duration: 0.42, ease: 'expo.out' },
           pos
         );
-        pos += 0.09;
+        step(0.09);
         break;
       }
       case 'type': {
@@ -78,7 +96,7 @@ export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsa
           { opacity: 1, duration: 0.012, stagger: 0.016, ease: 'none' },
           pos
         );
-        pos += Math.min(0.02 + chars.length * 0.006, 0.14);
+        step(Math.min(0.02 + chars.length * 0.006, 0.14));
         break;
       }
       case 'count': {
@@ -102,7 +120,7 @@ export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsa
           },
           pos
         );
-        pos += 0.1;
+        step(0.1);
         break;
       }
       case 'bar': {
@@ -114,7 +132,7 @@ export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsa
           { scaleX: el.querySelector('i') ? value : 1, duration: 0.6, ease: 'power2.out' },
           pos
         );
-        pos += 0.05;
+        step(0.05);
         break;
       }
       case 'draw': {
@@ -122,7 +140,7 @@ export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsa
         if (!paths.length) break;
         gsap.set(paths, { strokeDasharray: 1, strokeDashoffset: 1, opacity: 1 });
         tl.to(paths, { strokeDashoffset: 0, duration: 1.1, ease: 'power1.inOut', stagger: 0.05 }, pos);
-        pos += 0.16;
+        step(0.16);
         break;
       }
       case 'scanline': {
@@ -143,7 +161,7 @@ export function buildPanelTimeline(root: HTMLElement, onClosed: () => void): gsa
           { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' },
           pos
         );
-        pos += 0.055;
+        step(0.055);
         break;
       }
     }

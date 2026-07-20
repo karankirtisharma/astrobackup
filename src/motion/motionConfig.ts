@@ -19,7 +19,8 @@ export const DUR = {
   labelStagger: 0.07,
   typeCharSec: 0.018,
   panelOpen: 2.5,
-  closeSpeedup: 1.35,
+  /** Panel dismissal. A wind-down, not a reversed build — see DossierPanel. */
+  panelExit: 0.2,
 } as const;
 
 /** Deliberate stillness after the protocol click, before anything responds. */

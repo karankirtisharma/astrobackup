@@ -35,8 +35,8 @@ npm run optimize:models   # assets-src/*.glb → public/models/*.glb (~2-3.3MB)
   procedural idle for the unrigged characters, energy-bridge particle shader,
   post-processing. Raycasting hits invisible capsules on layer 1 only.
 - `src/ui/` — DOM overlay: nav, HUD, classified dossier panels (one master
-  GSAP timeline built from `data-anim` attributes; close is literally
-  `timeline.reverse()`), the protocol/sync overlay, boot loader.
+  GSAP timeline built from `data-anim` attributes; dismissal kills it and
+  plays a ~200ms wind-down), the protocol/sync overlay, boot loader.
   Contract: any node written imperatively is rendered EMPTY by React.
 - `src/scroll/` — the post-completion manifesto (page unlocks only after
   `PROTOCOL COMPLETE`).

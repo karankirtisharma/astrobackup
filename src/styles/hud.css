@@ -17,73 +17,180 @@
   z-index: 0;
 }
 
-/* ————— NAV ————— */
+/* ————— NAV — notch bar —————
+   A 64px centre tab drops below 40px side rails, joined by two 50px corner
+   curves. Twin hairlines trace rail → curve → tab so the whole silhouette
+   reads as one continuous cut edge.
+
+   The fills are clip-path rather than SVG so backdrop-filter is clipped with
+   them — the notch is genuinely glass, not a painted silhouette. */
+
 .cy-nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
+  height: 64px;
   z-index: var(--z-nav);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--sp-5) var(--frame-inset);
+  align-items: flex-start;
   pointer-events: none;
-}
-
-.cy-nav__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
   color: var(--text-hi);
 }
 
-.cy-nav__wordmark {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.28em;
+.cy-nav a,
+.cy-nav button {
+  pointer-events: auto;
 }
 
-.cy-nav__pill {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+/* — side rails — */
+.cy-nav__rail {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  padding: var(--sp-2) var(--sp-3);
-  background: rgba(8, 10, 9, 0.55);
-  backdrop-filter: blur(10px);
+  justify-content: flex-end;
+  padding: 0 var(--frame-inset);
+  background: rgba(9, 12, 10, 0.55);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+
+.cy-nav__rail-line,
+.cy-nav__tab-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--text-hi);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.cy-nav__rail--l {
+  justify-content: flex-start;
+}
+
+.cy-nav__wordmark {
+  position: relative;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--text-hi);
+  white-space: nowrap;
+}
+
+.cy-nav__status {
+  position: relative;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--grey-3);
+  white-space: nowrap;
+}
+
+/* — the notch itself — */
+.cy-nav__notch {
+  display: flex;
+  height: 64px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.cy-nav__corner {
+  position: relative;
+  width: 50px;
+  height: 100%;
+  flex: none;
+}
+
+.cy-nav__corner-fill {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 12, 10, 0.55);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+
+/* left: rail height (40) curving down to tab height (64) */
+.cy-nav__corner--l .cy-nav__corner-fill {
+  -webkit-clip-path: path('M0 0 H50 V64 C25 64 25 40 0 40 Z');
+  clip-path: path('M0 0 H50 V64 C25 64 25 40 0 40 Z');
+}
+
+/* right: mirrored — tab height back up to rail height */
+.cy-nav__corner--r .cy-nav__corner-fill {
+  -webkit-clip-path: path('M0 0 H50 V40 C25 40 25 64 0 64 Z');
+  clip-path: path('M0 0 H50 V40 C25 40 25 64 0 64 Z');
+}
+
+.cy-nav__corner-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--text-hi);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.cy-nav__tab {
+  position: relative;
+  height: 100%;
+  flex: 1;
+  min-width: 0;
+}
+
+.cy-nav__tab-fill {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 12, 10, 0.55);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+
+/* content hangs at the bottom of the tab, as the notch shape implies */
+.cy-nav__content {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--sp-5);
+  padding: 0 var(--sp-5) 10px;
+}
+
+.cy-nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  flex: none;
 }
 
 .cy-nav__link {
   position: relative;
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   color: var(--grey-3);
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: 999px;
-  transition: color 0.25s ease, letter-spacing 0.25s ease;
+  white-space: nowrap;
+  transition: color 0.25s ease;
 }
 
 .cy-nav__link:hover {
-  color: var(--grey-1);
-  letter-spacing: 0.14em;
+  color: var(--text-hi);
 }
 
 .cy-nav__link[aria-current='page'] {
   color: var(--text-hi);
-  background: var(--green-tint);
 }
 
 .cy-nav__link[aria-current='page']::after {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: -7px;
+  bottom: -6px;
   width: 3px;
   height: 3px;
   border-radius: 50%;
@@ -91,40 +198,46 @@
   transform: translateX(-50%);
 }
 
-.cy-nav__right {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
+.cy-nav__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  margin: 0 var(--sp-4);
+  color: var(--text-hi);
+  transition: transform 0.3s ease;
+}
+
+.cy-nav__mark:hover {
+  transform: scale(1.06);
 }
 
 .cy-nav__secure {
-  text-align: right;
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  line-height: 1.6;
-}
-
-.cy-nav__secure-title {
-  color: var(--text-hi);
-  font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-  justify-content: flex-end;
+  padding-left: var(--sp-4);
+  border-left: 1px solid var(--line-1);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--grey-2);
+  white-space: nowrap;
 }
 
-.cy-nav__secure-sub {
-  color: var(--grey-3);
+/* burger + compact secure dot are desktop-hidden, revealed on narrow */
+.cy-nav__burger,
+.cy-nav__secure--sm {
+  display: none;
 }
 
 .cy-nav__burger {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border: 1px solid var(--line-1);
   border-radius: 50%;
-  display: grid;
   place-items: center;
-  gap: 0;
+  align-content: center;
+  flex: none;
   transition: border-color 0.25s ease;
 }
 
@@ -134,7 +247,7 @@
 
 .cy-nav__burger span {
   display: block;
-  width: 14px;
+  width: 13px;
   height: 1px;
   background: var(--text-hi);
   margin: 2px 0;
@@ -630,10 +743,28 @@
 
 
 @media (max-width: 900px) {
-  .cy-nav__pill {
+  /* Narrow: the tab keeps only burger · mark · status, and the rails give up
+     their width to it rather than the links wrapping inside the notch. */
+  .cy-nav__links {
     display: none;
   }
-  .cy-nav__secure {
+  .cy-nav__burger {
+    display: grid;
+  }
+  .cy-nav__secure--sm {
+    display: inline-flex;
+    padding-left: 0;
+    border-left: none;
+  }
+  .cy-nav__content {
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: 0 var(--sp-3) 10px;
+  }
+  .cy-nav__mark {
+    margin: 0;
+  }
+  .cy-nav__status {
     display: none;
   }
   .cy-hint {

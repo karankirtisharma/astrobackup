@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "optimize:models": "node scripts/optimize-models.mjs"
+    "optimize:models": "node scripts/optimize-models.mjs",
+    "art:extract": "node scripts/extract-dossier-art.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.2.5",

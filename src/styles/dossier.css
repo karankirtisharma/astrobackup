@@ -9,12 +9,26 @@
   bottom: calc(var(--frame-inset) + 52px);
   width: 404px;
   z-index: var(--z-hud);
-  border: 1px solid var(--line-1);
-  background: var(--bg-1);
-  backdrop-filter: blur(12px);
+  /* Glass surface: the scene stays legible through the panel, so the blur
+     does the separating rather than opacity. */
+  border: 1px solid rgba(233, 239, 234, 0.12);
+  background: linear-gradient(170deg, rgba(15, 19, 16, 0.55), rgba(7, 10, 8, 0.68));
+  -webkit-backdrop-filter: blur(22px) saturate(125%);
+  backdrop-filter: blur(22px) saturate(125%);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(233, 239, 234, 0.07);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* Click-off-a-card dismissal. Below the panel and below the nav so the nav
+   stays usable; transparent because the panel does its own separating. */
+.cy-dossier__dismiss {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-hud) - 1);
 }
 
 .cy-dossier--left {
@@ -130,14 +144,14 @@
 }
 
 .cy-field__label {
-  font-size: 9px;
-  letter-spacing: 0.18em;
+  font-size: 10px;
+  letter-spacing: 0.16em;
   color: var(--grey-2);
 }
 
 .cy-field__value {
-  font-size: 12px;
-  letter-spacing: 0.05em;
+  font-size: 14px;
+  letter-spacing: 0.04em;
   color: var(--text-hi);
 }
 
@@ -224,11 +238,18 @@
   gap: var(--sp-3);
 }
 
+/* No opaque fill: a solid swatch inside a glass card reads as a pasted
+   rectangle. Only the scanline texture stays, and it is translucent so the
+   panel's blur still carries through. */
 .cy-visual__cell {
-  border: 1px solid var(--line-2);
-  background:
-    repeating-linear-gradient(0deg, transparent 0 3px, rgba(233, 239, 234, 0.025) 3px 4px),
-    radial-gradient(circle at 50% 45%, #131715 0%, #090b0a 75%);
+  border: 1px solid rgba(233, 239, 234, 0.09);
+  border-radius: 8px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgba(233, 239, 234, 0.02) 3px 4px
+  );
   aspect-ratio: 4 / 3.4;
   display: grid;
   place-items: center;
@@ -293,14 +314,741 @@
 .cy-meta-rows .row {
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
-  letter-spacing: 0.14em;
+  font-size: 10px;
+  letter-spacing: 0.12em;
   color: var(--grey-2);
 }
 
 .cy-meta-rows .row b {
   font-weight: 400;
   color: var(--grey-1);
+}
+
+/* ————————————————————————————————————————————————
+   Bento variant — the cypherpunk dossier as six instrument cards.
+   Each card is its own bordered module; the panel-wide construction
+   grid is suppressed so borders read cleanly.
+   ———————————————————————————————————————————————— */
+
+/* The bento boards have no frame of their own: the six panes ARE the panel.
+   Everything the parent used to provide — surface, border, blur, shadow —
+   is removed so the cards float directly over the scene.
+
+   The blur therefore has to move onto the cards (below). That is now a
+   single backdrop pass per card rather than a nested one, which is why it
+   was worth avoiding before and is correct here. */
+.cy-dossier--bento {
+  width: 600px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* header + travelling scanline belong to the framed variant only */
+.cy-dossier--bento .cy-dossier__head,
+.cy-dossier--bento .cy-dossier__scan {
+  display: none;
+}
+
+.cy-dossier--bento .cy-dossier__grid {
+  display: none;
+}
+
+.cy-dossier--bento .cy-dossier__body {
+  padding: var(--sp-4);
+  gap: var(--sp-3);
+  align-content: start;
+}
+
+/* Back control. The board has no frame to hang a close button on, so this
+   sits above the panes as its own affordance — click-off-a-card and Escape
+   still work, this just makes the way out visible. */
+.cy-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 7px var(--sp-3);
+  border: 1px solid rgba(233, 239, 234, 0.14);
+  border-radius: 999px;
+  background: linear-gradient(
+    160deg,
+    rgba(24, 29, 25, 0.72),
+    rgba(12, 16, 13, 0.66)
+  );
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--grey-1);
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.cy-back:hover {
+  color: var(--text-hi);
+  border-color: rgba(176, 245, 70, 0.45);
+  transform: translateX(-2px);
+}
+
+.cy-back svg {
+  transition: transform 0.2s ease;
+}
+
+.cy-back:hover svg {
+  transform: translateX(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cy-back,
+  .cy-back svg {
+    transition: color 0.2s ease, border-color 0.2s ease;
+    transform: none;
+  }
+  .cy-back:hover,
+  .cy-back:hover svg {
+    transform: none;
+  }
+}
+
+.cy-bento {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+}
+
+.cy-bento__col {
+  display: grid;
+  gap: var(--sp-3);
+  align-content: start;
+  min-width: 0;
+}
+
+/* Each module is a glass pane stacked on the panel's own frosted surface.
+   Glass is load-bearing here, not decoration: the panel sits over a live
+   WebGL scene and the translucency is what keeps the character readable
+   behind it.
+
+   No per-card backdrop-filter — nested blurs sample the already-blurred
+   parent and cost a full offscreen pass each; seven of them over a running
+   render loop is not a trade worth making. The material comes from a
+   brighter translucent fill plus a lit top edge instead.
+
+   Shadow stays at 8px blur: a 1px border paired with a wide soft shadow is
+   the ghost-card tell. The rim light does the lifting, the shadow only
+   seats the pane. */
+.cy-card {
+  position: relative;
+  border: 1px solid rgba(233, 239, 234, 0.14);
+  border-radius: 14px;
+  background: linear-gradient(
+    158deg,
+    rgba(24, 29, 25, 0.72) 0%,
+    rgba(12, 16, 13, 0.66) 45%,
+    rgba(18, 23, 19, 0.7) 100%
+  );
+  /* 10px, and no saturate(): six panes each cost their own backdrop pass
+     over a live render loop, and saturate() adds another filter op for an
+     effect that is invisible against a near-black scene. Blur radius is the
+     cheapest thing to give back here. */
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.045),
+    0 3px 8px rgba(0, 0, 0, 0.34);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* identity chip — the boxed sub-header with its inert OS tick */
+.cy-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 1px solid rgba(233, 239, 234, 0.16);
+  border-radius: 8px;
+  padding: 9px var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.cy-chip__label {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--text-hi);
+}
+
+.cy-card__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  margin: 0 var(--sp-4);
+  padding-left: 0;
+  padding-right: 0;
+  border-bottom: 1px solid rgba(233, 239, 234, 0.1);
+}
+
+.cy-card__title {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--text-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cy-card__mark {
+  margin-left: auto;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--grey-3);
+}
+
+/* decorative dash run at the title bar's right edge */
+.cy-card__ticks {
+  margin-left: auto;
+  width: 62px;
+  height: 4px;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--grey-2) 0 5px,
+    transparent 5px 9px
+  );
+}
+
+.cy-card__ticks + .cy-card__mark {
+  margin-left: var(--sp-2);
+}
+
+/* fine hatch rule used beneath meter readouts */
+.cy-hatch {
+  display: block;
+  height: 7px;
+  transform-origin: left;
+  opacity: 0.45;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--grey-2) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.cy-card__body {
+  padding: var(--sp-4);
+  display: grid;
+  gap: var(--sp-3);
+  align-content: start;
+  flex: 1;
+  min-width: 0;
+}
+
+.cy-card__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: auto;
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--line-2);
+}
+
+/* identity spans the tall left slot; its rows breathe a little more */
+.cy-card--identity .cy-card__body {
+  gap: var(--sp-3);
+}
+
+/* — cutout image slots —
+   Drop an alpha PNG into src/assets/dossier/ and it replaces the SVG art;
+   see that folder's README. */
+.cy-art {
+  display: grid;
+  place-items: center;
+  color: var(--grey-2);
+  min-width: 0;
+}
+
+.cy-art > svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Art is alpha-keyed at build time (luminance → alpha, white RGB), so it
+   composites correctly on a translucent surface. No blend mode: screen would
+   composite against whatever shows through the glass and lift the black
+   field back into view. */
+.cy-art__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.94;
+}
+
+/* — bio metrics / vitals — */
+.cy-bio {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.cy-bio__art {
+  height: 186px;
+  opacity: 0.92;
+}
+
+.cy-card--vitals .cy-bio__art {
+  height: 116px;
+}
+
+.cy-bio__stats {
+  display: grid;
+  gap: var(--sp-4);
+  align-content: center;
+  min-width: 66px;
+}
+
+.cy-bio__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'label label' 'figure trace' 'unit unit';
+  gap: 1px var(--sp-2);
+  align-items: baseline;
+}
+
+.cy-bio__row .cy-field__label {
+  grid-area: label;
+}
+
+.cy-bio__figure {
+  grid-area: figure;
+  font-size: 20px;
+  color: var(--text-hi);
+}
+
+.cy-bio__unit {
+  grid-area: unit;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  /* grey-2, not grey-3: the brighter glass fill raised the background
+     luminance and grey-3 fell to 3.97:1 against it. */
+  color: var(--grey-2);
+  border-top: 1px solid var(--line-2);
+  padding-top: 2px;
+  margin-top: 2px;
+}
+
+.cy-bio__trace {
+  grid-area: trace;
+  color: var(--grey-1);
+  line-height: 0;
+  align-self: center;
+}
+
+/* — skill matrix — */
+.cy-skills {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.cy-skills__row {
+  display: grid;
+  grid-template-columns: 1fr 52px 26px;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+/* the bar reads as a segmented meter, not a solid fill */
+.cy-skills__bar .cy-bar {
+  height: 8px;
+  background: transparent;
+}
+
+.cy-skills__bar .cy-bar i {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--text-hi) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.cy-skills__bar .cy-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--grey-4) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.cy-skills__label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--grey-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cy-skills__pct {
+  font-size: 12px;
+  color: var(--text-hi);
+  text-align: right;
+}
+
+/* — data footprint — */
+.cy-card--print .cy-print {
+  grid-template-columns: 78px 1fr;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.cy-card--print .cy-print__art {
+  width: 78px;
+  height: 88px;
+  border: none;
+  background: none;
+}
+
+.cy-card--print .cy-print__art svg {
+  width: 72px;
+  height: 86px;
+}
+
+.cy-tags {
+  list-style: none;
+  display: grid;
+  gap: var(--sp-4);
+  align-content: center;
+}
+
+.cy-tags li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--grey-1);
+  white-space: nowrap;
+}
+
+/* the leader line running back to the print */
+.cy-tags__node {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--grey-2);
+  border-radius: 50%;
+  position: relative;
+  flex: none;
+}
+
+.cy-tags__node::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: var(--sp-3);
+  height: 1px;
+  background: var(--line-1);
+}
+
+.cy-tags__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cy-tags__check {
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--line-1);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 7px;
+  color: var(--grey-1);
+  flex: none;
+}
+
+/* — neural map — */
+.cy-card--neural .cy-visual {
+  gap: var(--sp-2);
+}
+
+.cy-card--neural .cy-visual__cell {
+  aspect-ratio: 1 / 1;
+}
+
+.cy-card--neural .cy-meta-rows {
+  margin-top: var(--sp-2);
+}
+
+/* — codename — */
+.cy-code {
+  display: grid;
+  grid-template-columns: 1fr 84px;
+  gap: var(--sp-3);
+}
+
+.cy-code__main {
+  display: grid;
+  gap: var(--sp-3);
+  align-content: start;
+  min-width: 0;
+}
+
+/* each field sits above a hairline, as on the reference board */
+.cy-code__block {
+  display: grid;
+  gap: 2px;
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--line-2);
+}
+
+.cy-code__block:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.cy-code__name {
+  font-size: 18px;
+  letter-spacing: 0.14em;
+  color: var(--text-hi);
+}
+
+.cy-code__value {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--text-hi);
+}
+
+.cy-beliefs {
+  list-style: none;
+  display: grid;
+  gap: 1px;
+  margin-top: 2px;
+}
+
+.cy-beliefs li {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--text-hi);
+}
+
+.cy-code__signart {
+  color: var(--grey-1);
+  line-height: 0;
+  height: 34px;
+  justify-items: start;
+}
+
+.cy-code__signart .cy-art__img {
+  width: auto;
+  max-width: 100%;
+  object-position: left center;
+}
+
+.cy-code__side {
+  display: grid;
+  grid-template-rows: 84px 1fr;
+  gap: var(--sp-2);
+  align-content: start;
+}
+
+.cy-code__radar {
+  height: 84px;
+  opacity: 0.7;
+}
+
+/* dotted-continent field — a texture, not a real map */
+.cy-worldmap {
+  min-height: 46px;
+  opacity: 0.45;
+  background-image: radial-gradient(var(--grey-2) 0.5px, transparent 0.6px);
+  background-size: 4px 4px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 50%, #000 40%, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 50%, #000 40%, transparent 78%);
+}
+
+/* ————— astronaut modules ————— */
+
+.cy-meta-rows--lg .row {
+  font-size: 10px;
+}
+
+.cy-meta-rows--lg .row b {
+  color: var(--text-hi);
+}
+
+/* mission profile */
+.cy-profile {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.cy-profile__art {
+  height: 96px;
+  opacity: 0.8;
+}
+
+.cy-profile__words {
+  list-style: none;
+  display: grid;
+  gap: var(--sp-2);
+  border-left: 1px solid var(--line-2);
+  padding-left: var(--sp-3);
+}
+
+.cy-profile__words li {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-hi);
+}
+
+.cy-card__foot--stack {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.cy-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-left: var(--sp-2);
+  vertical-align: middle;
+}
+
+/* mission log */
+.cy-log {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.cy-log__block {
+  display: grid;
+  gap: 3px;
+}
+
+.cy-log__label {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--grey-2);
+}
+
+.cy-log__line {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  color: var(--text-hi);
+}
+
+.cy-log__bullets {
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  padding-left: var(--sp-3);
+}
+
+.cy-log__bullets li {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--text-hi);
+}
+
+.cy-log__bullets li::before {
+  content: '• ';
+  color: var(--grey-2);
+}
+
+/* suit diagnostics + x-ray */
+.cy-suit {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.cy-suit__art {
+  height: 168px;
+  opacity: 0.9;
+}
+
+.cy-suit__stats {
+  display: grid;
+  gap: var(--sp-2);
+  border-left: 1px solid var(--line-2);
+  padding-left: var(--sp-3);
+}
+
+.cy-suit__stats .row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--grey-2);
+}
+
+.cy-suit__stats .row b {
+  font-weight: 400;
+  color: var(--text-hi);
+  white-space: nowrap;
+}
+
+.cy-suit__stats .row span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cy-suit__meta {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line-2);
+}
+
+.cy-xray__meta {
+  display: grid;
+  gap: var(--sp-3);
+  align-content: center;
+  border-left: 1px solid var(--line-2);
+  padding-left: var(--sp-3);
+}
+
+.cy-xray__block {
+  display: grid;
+  gap: 1px;
+}
+
+.cy-xray__line {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-hi);
+}
+
+@media (max-width: 900px) {
+  .cy-dossier--bento {
+    width: 100%;
+  }
+  .cy-bento {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
