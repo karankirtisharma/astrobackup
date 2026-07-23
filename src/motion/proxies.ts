@@ -53,6 +53,13 @@ export const fxProxy = {
   uFlow: 0.05,
   /** Bridge turbulence: chaotic ignition → laminar filament. */
   uTurbulence: 1.0,
+  /**
+   * Merge scan sweep, 0..1. 0 = line parked at the crown (nothing revealed),
+   * 1 = line has passed the soles (both figures fully revealed). The x-ray
+   * driver turns this into a screen-space Y each frame; the conductor is the
+   * only thing that ever tweens it.
+   */
+  uScan: 0,
 };
 
 /** Master sync clock (0..1) — tweened by the protocol timeline. */

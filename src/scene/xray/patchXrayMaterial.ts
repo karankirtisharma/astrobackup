@@ -38,18 +38,22 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
   mat.depthWrite = true;
 
   // Body is cut away inside the window; anatomy only survives inside it.
-  const cutTest = mode === 'body' ? '_d < 0.0' : '_d > 0.0';
+  const cutTest = mode === 'body' ? '_revealed' : '!_revealed';
 
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uLensCenter = lensUniforms.uLensCenter;
     shader.uniforms.uLensRadius = lensUniforms.uLensRadius;
+    shader.uniforms.uScanY = lensUniforms.uScanY;
+    shader.uniforms.uScanOn = lensUniforms.uScanOn;
 
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         /* glsl */ `#include <common>
         uniform vec2 uLensCenter;
-        uniform float uLensRadius;`
+        uniform float uLensRadius;
+        uniform float uScanY;
+        uniform float uScanOn;`
       )
       // ANCHORED AT THE TOP OF main(), NOT THE BOTTOM.
       //
@@ -73,9 +77,33 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
           vec2 _half = vec2(uLensRadius * 1.30, uLensRadius * 0.85);
           vec2 _q = abs(gl_FragCoord.xy - uLensCenter) - _half;
           float _d = max(_q.x, _q.y); // < 0 inside the rect, > 0 outside
+
+          // Revealed = inside the hover rect OR already passed by the merge
+          // sweep. Widening this ONE predicate is the entire scan feature; the
+          // cut itself is untouched, so it keeps every guarantee it had.
+          // uScanOn is 0 outside the ceremony, which collapses this back to the
+          // exact rect-only behaviour bit for bit.
+          bool _revealed = (_d < 0.0) || (uScanOn > 0.5 && gl_FragCoord.y > uScanY);
           if (${cutTest}) discard;
         }`
       );
+
+    // The sweep's leading edge, drawn on the ANATOMY only — the anatomy exists
+    // exactly where the sweep has already passed, so its lowest surviving
+    // fragments ARE the scan front. Injected late because it needs gl_FragColor,
+    // unlike the discard above which is deliberately as early as possible.
+    if (mode === 'anatomy') {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <dithering_fragment>',
+        /* glsl */ `#include <dithering_fragment>
+        {
+          float _e = gl_FragCoord.y - uScanY;
+          if (uScanOn > 0.5 && _e >= 0.0 && _e < 6.0) {
+            gl_FragColor.rgb += vec3(0.69, 0.96, 0.27) * (1.0 - _e / 6.0) * 1.7;
+          }
+        }`
+      );
+    }
   };
 
   // CRITICAL (spec §4): without a custom key, three can hand this material a
@@ -85,7 +113,7 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
   // program from the old blended build can never be reused.
   // The key MUST change whenever the injected GLSL or its anchor changes, or
   // three hands this material a program compiled against the old source.
-  mat.customProgramCacheKey = () => `xray-rect-cut-early-${mode}`;
+  mat.customProgramCacheKey = () => `xray-scan-cut-${mode}`;
 
   mat.needsUpdate = true;
 }

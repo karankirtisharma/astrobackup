@@ -25,7 +25,31 @@ export const lensUniforms = {
    *  a crisp scanner edge with a clean anatomy core. Fractional so the band
    *  collapses with the radius at the closed state (no ghost hole). */
   uLensFeather: { value: 0.16 },
+  /**
+   * MERGE SCAN — a horizontal sweep line in gl_FragCoord space (bottom-left
+   * origin, so the head is a HIGH y and the feet a LOW one). Everything ABOVE
+   * this line counts as revealed, exactly like the inside of the lens rect, so
+   * the line descending from head to toe progressively uncovers the anatomy.
+   *
+   * Deliberately reuses the lens's proven hard cut rather than adding a second
+   * reveal path: the body still discards where revealed and the anatomy still
+   * discards where not, both opaque and depth-tested. Only the definition of
+   * "revealed" widened — from `inside rect` to `inside rect OR above line`.
+   */
+  uScanY: { value: 0 },
+  /** 0 = no sweep (the lens behaves exactly as before), 1 = sweeping. */
+  uScanOn: { value: 0 },
 };
+
+/** Mirror of the sweep for CPU-side reads (the anatomy visibility gate). */
+export const scanState = { on: false };
+
+/** Publish the sweep. `y` is already in framebuffer pixels. */
+export function setScan(on: boolean, y: number) {
+  scanState.on = on;
+  lensUniforms.uScanOn.value = on ? 1 : 0;
+  lensUniforms.uScanY.value = y;
+}
 
 /** CSS-pixel mirror (top-left origin) for the DOM overlay to read. */
 export const lensState = {

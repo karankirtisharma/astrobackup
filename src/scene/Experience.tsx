@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Preload, PerformanceMonitor } from '@react-three/drei';
 import { CameraRig } from './CameraRig';
 import { lensState } from './xray/lensUniforms';
+import { fxProxy } from '../motion/proxies';
 import { SceneEnvironment } from './SceneEnvironment';
 import { LiquidBackground } from './liquidbg/LiquidBackground';
 import { LightingRig } from './LightingRig';
@@ -77,9 +78,17 @@ export function Experience() {
       camera={{ fov: BOOT_POSE.fov, near: 0.1, far: 60, position: BOOT_POSE.position }}
       onCreated={({ raycaster, gl, scene, camera }) => {
         if (import.meta.env.DEV) {
-          const w = window as unknown as { __scene?: unknown; __camera?: unknown };
+          const w = window as unknown as {
+            __scene?: unknown;
+            __camera?: unknown;
+            __fx?: unknown;
+          };
           w.__scene = scene;
           w.__camera = camera;
+          // The fx proxy, so ceremony-only effects (the merge scan sweep) can
+          // be pinned at a chosen position and inspected without having to
+          // catch a 3s window mid-ceremony.
+          w.__fx = fxProxy;
         }
         // Pointer events only ever test layer-1 hitboxes — the 260k-triangle
         // character meshes never enter an intersection test.

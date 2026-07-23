@@ -3,7 +3,7 @@ import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { Mesh, type Group, type Material, type MeshStandardMaterial } from 'three';
 import { patchXrayMaterial } from './patchXrayMaterial';
-import { lensState } from './lensUniforms';
+import { lensState, scanState } from './lensUniforms';
 import { DEBUG_FLAGS } from '../../debugFlags';
 import type { Side } from '../../state/transitions';
 
@@ -68,7 +68,11 @@ export function Anatomy({ side }: { side: Side }) {
     const g = group.current;
     if (!g) return;
     const mine = lensState.side === null || lensState.side === side;
-    g.visible = lensState.cssRadius > 0.3 && (DEBUG_FLAGS.xray === 'full' || mine);
+    const lensOpen = lensState.cssRadius > 0.3 && (DEBUG_FLAGS.xray === 'full' || mine);
+    // The merge sweep reveals BOTH figures at once, so it ignores the per-side
+    // gate entirely — that gate exists only to skip a draw while the hover lens
+    // is parked over the other character.
+    g.visible = scanState.on || lensOpen;
   });
 
   const prepared = useMemo(() => {

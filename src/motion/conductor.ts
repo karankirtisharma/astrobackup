@@ -238,6 +238,15 @@ function buildProtocolTimeline() {
   );
   tl.to(characterProxy, { agitation: 1, duration: md(4), ease: 'power1.in' }, syncStart + md(0.8));
 
+  // THE MERGE SCAN. A line walks from crown to soles across BOTH figures while
+  // they turn to face each other, uncovering the anatomy behind it — the
+  // protocol reading what it is about to merge.
+  //
+  // Linear, not eased: a scanner that accelerates reads as hesitant. It starts
+  // a beat after the turn so the rotation registers first, and it lands well
+  // inside the sync so the revealed pair is what the merge actually happens to.
+  tl.to(fxProxy, { uScan: 1, duration: md(3.2), ease: 'none' }, syncStart + md(0.35));
+
   // Escalation → hold → calm before completion (the room accepts the protocol).
   tl.to(fxProxy, { uEnergy: 1, duration: dSync * 0.55, ease: 'power1.in' }, syncStart + md(0.4));
   tl.to(fxProxy, { uEnergy: 0.7, duration: dSync * 0.15, ease: 'power2.out' }, syncStart + dSync * 0.85);
@@ -245,6 +254,9 @@ function buildProtocolTimeline() {
 
   // ——— Phase C: completion settle ———
   const tComplete = syncStart + dSync + 0.02;
+  // Shells close again just before the protocol lands, so the pair reads as
+  // whole at completion rather than frozen mid-dissection.
+  tl.to(fxProxy, { uScan: 0, duration: md(0.9), ease: 'power2.inOut' }, tComplete - md(1.2));
   tl.call(() => send({ type: 'SYNC_COMPLETE' }), undefined, tComplete);
 
   // A beat of stillness at 100%, then everything stabilizes.
@@ -284,7 +296,14 @@ function runCancel() {
     },
     0
   );
-  tl.to(fxProxy, { uBridge: 0, uEnergy: 0, uPulse: 0, uOrbit: 0, duration: md(0.9), ease: 'power2.inOut' }, 0.1);
+  // uScan belongs in this list: cancelling mid-sweep must close the shells
+  // again. Without it the protocol timeline is killed wherever it happened to
+  // be and both figures are left standing there permanently dissected.
+  tl.to(
+    fxProxy,
+    { uBridge: 0, uEnergy: 0, uPulse: 0, uOrbit: 0, uScan: 0, duration: md(0.9), ease: 'power2.inOut' },
+    0.1
+  );
   tl.to(
     characterProxy,
     { rotL: CHAR_BASE_ROT.left, rotR: CHAR_BASE_ROT.right, agitation: 0, duration: md(1.0), ease: 'power2.inOut' },
