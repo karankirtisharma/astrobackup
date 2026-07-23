@@ -301,16 +301,16 @@
   left: 0;
   z-index: var(--z-hud);
   pointer-events: none;
-  border-radius: 50%;
   opacity: 0;
   will-change: transform, opacity;
-  background: radial-gradient(
-    circle,
-    transparent 40%,
-    rgba(233, 239, 234, 0.05) 62%,
-    rgba(176, 245, 70, 0.16) 78%,
-    transparent 84%
-  );
+  /* RECTANGULAR scan window — matches the shader's screen-space rect exactly.
+     A thin lime frame with a soft outer glow reads as a scanner viewport;
+     the interior stays clear so the reveal underneath is unobstructed. */
+  background: transparent;
+  border: 1px solid rgba(176, 245, 70, 0.5);
+  box-shadow:
+    inset 0 0 0 1px rgba(233, 239, 234, 0.05),
+    0 0 16px rgba(176, 245, 70, 0.16);
 }
 
 /* ————— FRAME DECORATIONS ————— */

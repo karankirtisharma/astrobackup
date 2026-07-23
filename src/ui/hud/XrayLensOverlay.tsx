@@ -25,11 +25,13 @@ export function XrayLensOverlay() {
       if (r < 0.5) {
         el.style.opacity = '0';
       } else {
-        // Ring a touch larger than the reveal so its glow frames the peek.
-        const d = r * 2.4;
-        el.style.width = `${d}px`;
-        el.style.height = `${d}px`;
-        el.style.transform = `translate(${lensState.cssX - d / 2}px, ${lensState.cssY - d / 2}px)`;
+        // Match the shader's rect EXACTLY: half-size is (r * 1.30, r * 0.85),
+        // so the frame lands on the reveal's own edge rather than around it.
+        const w = r * 2.6;
+        const h = r * 1.7;
+        el.style.width = `${w}px`;
+        el.style.height = `${h}px`;
+        el.style.transform = `translate(${lensState.cssX - w / 2}px, ${lensState.cssY - h / 2}px)`;
         el.style.opacity = String(Math.min(r / 24, 1));
       }
       raf = requestAnimationFrame(tick);

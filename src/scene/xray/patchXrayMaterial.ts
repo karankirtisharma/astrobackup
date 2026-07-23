@@ -21,11 +21,20 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
   mat.userData.xrayPatched = true;
 
   mat.transparent = true;
-  // Body keeps writing depth: it is the outer, near-opaque shell, and its
-  // depth is what preserves the scene's existing sort order against the
-  // platform and particles. Anatomy must NOT write depth or its (invisible,
-  // alpha-0) area outside the lens would occlude things behind it.
-  mat.depthWrite = mode === 'body';
+  // BOTH modes write depth.
+  //
+  // Body: it is the outer, near-opaque shell, and its depth preserves the
+  // scene's sort order against the platform and particles.
+  //
+  // Anatomy: it USED to skip depth writes so its invisible (alpha-0) area
+  // outside the lens couldn't occlude the scene — but that also stopped its own
+  // ~56 sub-meshes from sorting against each other, so inner organs drew OVER
+  // outer muscle depending on draw order. That was invisible while the reveal
+  // was flat white; the moment the texture showed through it read as a glitchy
+  // blob with dark voids. Fix: DISCARD the invisible area (see below) instead
+  // of blending it, which makes writing depth safe — nothing outside the lens
+  // is ever rasterised, and inside the lens the layers sort correctly.
+  mat.depthWrite = true;
 
   // SET, not multiply. These Tripo materials carry a stray sub-1 alpha in
   // their textures — the reason Character.tsx forces them opaque. Multiplying
@@ -34,6 +43,11 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
   // then split into a coloured fringe. Overwriting alpha discards that base
   // channel, so the surface is fully opaque everywhere except the lens hole.
   const alphaExpr = mode === 'body' ? '_t' : '(1.0 - _t)';
+  // Anatomy throws away its fully-transparent area so writing depth is safe
+  // (see the depthWrite note above) — that is what makes its own layers sort.
+  // The body must NOT discard: it stays a blended shell whose depth anchors the
+  // scene's sort order even where the lens has faded it to nothing.
+  const discardLine = mode === 'anatomy' ? 'if (gl_FragColor.a < 0.02) discard;' : '';
 
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uLensCenter = lensUniforms.uLensCenter;
@@ -52,11 +66,17 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
         '#include <dithering_fragment>',
         /* glsl */ `#include <dithering_fragment>
         {
-          float _d = distance(gl_FragCoord.xy, uLensCenter);
-          float _inner = uLensRadius * (1.0 - uLensFeather);
-          float _outer = uLensRadius * (1.0 + uLensFeather);
-          float _t = smoothstep(_inner, _outer, _d); // 0 inside → 1 outside
+          // RECTANGULAR scan window, in screen space. Simple and absolute:
+          // inside the rect the other model shows EXACTLY, outside it never
+          // does. The edge is a hard few-pixel antialias rather than a wide
+          // feathered band, so there is no muddy body/anatomy crossfade.
+          vec2 _half = vec2(uLensRadius * 1.30, uLensRadius * 0.85);
+          vec2 _q = abs(gl_FragCoord.xy - uLensCenter) - _half;
+          float _d = max(_q.x, _q.y);          // < 0 inside the rect, > 0 outside
+          float _e = max(1.0, uLensRadius * uLensFeather * 0.15); // ~1-2px edge
+          float _t = smoothstep(-_e, _e, _d);  // 0 inside → 1 outside
           gl_FragColor.a = ${alphaExpr};
+          ${discardLine}
         }`
       );
   };

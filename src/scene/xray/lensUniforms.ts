@@ -1,6 +1,7 @@
 import { Vector2 } from 'three';
 import { easing } from 'maath';
 import { getScene } from '../../state/store';
+import type { Side } from '../../state/transitions';
 
 /**
  * X-ray lens — the single source of truth shared by the two patched materials
@@ -31,6 +32,10 @@ export const lensState = {
   pointerX: -1e5,
   pointerY: -1e5,
   hovering: false,
+  /** Which figure the pointer is over. BOTH characters carry an anatomy
+   *  underlay now, so each one uses this to skip its ~400k-tri draw while the
+   *  lens is over the other. null = unknown (draw, don't risk hiding). */
+  side: null as Side | null,
   cssX: -1e5,
   cssY: -1e5,
   cssRadius: 0,
@@ -46,8 +51,9 @@ export const LENS_RADIUS_CSS = 50;
  *  tracking" — the lens lagged so far it never landed on what you pointed at. */
 const FOLLOW_SMOOTH = 0.03;
 
-export function setLensHover(on: boolean) {
+export function setLensHover(on: boolean, side: Side | null = null) {
   lensState.hovering = on;
+  lensState.side = on ? side : null;
 }
 
 export function setLensPointer(x: number, y: number) {

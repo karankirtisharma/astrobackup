@@ -1,13 +1,20 @@
 import { useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { Color, Mesh, type Group, type Material, type MeshStandardMaterial } from 'three';
+import { Mesh, type Group, type Material, type MeshStandardMaterial } from 'three';
 import { patchXrayMaterial } from './patchXrayMaterial';
 import { lensState } from './lensUniforms';
 import { DEBUG_FLAGS } from '../../debugFlags';
+import type { Side } from '../../state/transitions';
 
-const ANATOMY_URL = `${import.meta.env.BASE_URL}models/anatomy.glb`;
-useGLTF.preload(ANATOMY_URL);
+/** One underlay per figure. Both are normalized to height 1.8 / feet y=0 by
+ *  `npm run optimize:models`, so each registers with its own body model. */
+const ANATOMY_URL: Record<Side, string> = {
+  cypherpunk: `${import.meta.env.BASE_URL}models/anatomy.glb`,
+  astronaut: `${import.meta.env.BASE_URL}models/astroanatomy.glb`,
+};
+useGLTF.preload(ANATOMY_URL.cypherpunk);
+useGLTF.preload(ANATOMY_URL.astronaut);
 
 /**
  * Malformed sub-meshes to hide by name (spec §7). AI-generated anatomy models
@@ -17,16 +24,31 @@ useGLTF.preload(ANATOMY_URL);
  *
  * Matched case-insensitively as substrings against node names.
  */
-const HIDDEN_MESH_PATTERNS: string[] = [
-  // The hands. Crude mitten geometry, and the anatomy figure's proportions
-  // drift from the body model's at the extremities, so the lens over a hand
-  // showed a displaced grey blob — the classic AI-model hand failure.
-  // Located via scripts/inspect-anatomy-parts.mjs (outermost |x| at wrist
-  // height). Hidden, the lens over a hand opens onto a soft empty feather,
-  // which reads as "nothing to scan here" rather than a glitch.
-  'tripo_part_7',
-  'tripo_part_24',
-];
+const HIDDEN_MESH_PATTERNS: Record<Side, string[]> = {
+  cypherpunk: [
+    // The hands. Crude mitten geometry, and the anatomy figure's proportions
+    // drift from the body model's at the extremities, so the lens over a hand
+    // showed a displaced grey blob — the classic AI-model hand failure.
+    // Located via scripts/inspect-anatomy-parts.mjs (outermost |x| at wrist
+    // height). Hidden, the lens over a hand opens onto a soft empty feather,
+    // which reads as "nothing to scan here" rather than a glitch.
+    'tripo_part_7',
+    'tripo_part_24',
+  ],
+  // None identified yet — inspect at ?xray=full and add any broken nodes here.
+  astronaut: [],
+};
+
+/**
+ * Per-model authoring yaw correction.
+ *
+ * The underlay is nested inside the body's transform, so it inherits the body's
+ * BASE_YAW (Character.tsx). astronaut.glb is modelled side-on and is rotated
+ * +90° to face front — but astroanatomy.glb already ships front-facing, so it
+ * inherits a rotation it doesn't need and reads in profile inside the suit.
+ * Cancel it here. The cypherpunk pair share an orientation, so it needs none.
+ */
+const ANATOMY_YAW: Record<Side, number> = { cypherpunk: 0, astronaut: -Math.PI / 2 };
 
 /**
  * The anatomy underlay. Loads once, patches every material to fade OUTSIDE the
@@ -35,15 +57,20 @@ const HIDDEN_MESH_PATTERNS: string[] = [
  * it inherits identical position / rotation / breath / sway — perfect
  * registration, the lens can never slide off what it scans.
  */
-export function Anatomy() {
-  const { scene } = useGLTF(ANATOMY_URL);
+export function Anatomy({ side }: { side: Side }) {
+  const { scene } = useGLTF(ANATOMY_URL[side]);
   const group = useRef<Group>(null);
 
-  // 350k triangles the reveal only ever shows a peek of — skip the whole draw
-  // while the lens is closed (the common, not-hovering case).
+  // ~400k triangles the reveal only ever shows a peek of — skip the whole draw
+  // while the lens is closed (the common, not-hovering case). With BOTH figures
+  // carrying an underlay, also skip it when the lens is over the OTHER one:
+  // it would render fully transparent for nothing. Fail-safe — if no side has
+  // been recorded, draw rather than silently hide the reveal.
   useFrame(() => {
     const g = group.current;
-    if (g) g.visible = lensState.cssRadius > 0.3;
+    if (!g) return;
+    const mine = lensState.side === null || lensState.side === side;
+    g.visible = lensState.cssRadius > 0.3 && (DEBUG_FLAGS.xray === 'full' || mine);
   });
 
   const prepared = useMemo(() => {
@@ -52,7 +79,7 @@ export function Anatomy() {
       if (!(obj as Mesh).isMesh) return;
       const mesh = obj as Mesh;
 
-      const broken = HIDDEN_MESH_PATTERNS.some((p) =>
+      const broken = HIDDEN_MESH_PATTERNS[side].some((p) =>
         mesh.name.toLowerCase().includes(p.toLowerCase())
       );
       if (broken) {
@@ -111,7 +138,7 @@ export function Anatomy() {
     if (import.meta.env.DEV && DEBUG_FLAGS.xray === 'full') {
       // eslint-disable-next-line no-console
       console.log(
-        '[xray] anatomy meshes:',
+        `[xray] ${side} anatomy meshes:`,
         (() => {
           const names: string[] = [];
           scene.traverse((o) => {
@@ -120,13 +147,13 @@ export function Anatomy() {
           return names;
         })()
       );
-      if (hidden.length) console.log('[xray] hidden:', hidden);
+      if (hidden.length) console.log(`[xray] ${side} hidden:`, hidden);
     }
     return scene;
-  }, [scene]);
+  }, [scene, side]);
 
   return (
-    <group ref={group} visible={false}>
+    <group ref={group} visible={false} rotation-y={ANATOMY_YAW[side]}>
       <primitive object={prepared} />
     </group>
   );

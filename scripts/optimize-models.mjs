@@ -35,6 +35,11 @@ const MODELS = [
   // muscle/organ detail up close, which simplifies away faster than a
   // clothed silhouette. Run: npm run optimize:models anatomy
   { src: 'assets-src/anatomy-src.glb', out: 'public/models/anatomy.glb', ratio: 0.16, fit: 'height', target: 1.8 },
+  // The astronaut's own anatomy underlay. Same normalization as the cypherpunk
+  // one (height 1.8, feet y=0) so it registers when nested in his transform —
+  // the suit is bulkier than the body, so the reveal reads as looking INSIDE
+  // the suit. Run: npm run optimize:models astroanatomy
+  { src: 'assets-src/astroanatomy-src.glb', out: 'public/models/astroanatomy.glb', ratio: 0.16, fit: 'height', target: 1.8 },
 ];
 
 await MeshoptSimplifier.ready;

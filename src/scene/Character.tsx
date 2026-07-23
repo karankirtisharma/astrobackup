@@ -15,7 +15,9 @@ import { XrayDriver } from './xray/useXrayDriver';
 import { setLensHover } from './xray/lensUniforms';
 import { DEBUG_FLAGS } from '../debugFlags';
 
-// The X-ray lens lives on the cypherpunk figure (its anatomy underlay exists).
+// BOTH figures now carry an anatomy underlay (anatomy.glb / astroanatomy.glb),
+// so both get the X-ray lens. The lens itself is GLOBAL — one cursor, one
+// shared uniform set — so its driver is mounted exactly once (see below).
 const XRAY_ENABLED = DEBUG_FLAGS.xray !== 'off';
 
 // BASE_URL-aware: the site may be served from a subpath (GitHub Pages).
@@ -42,7 +44,7 @@ interface MaterialRecord {
 
 export function Character({ side }: { side: Side }) {
   const isLeft = side === 'cypherpunk';
-  const xray = isLeft && XRAY_ENABLED;
+  const xray = XRAY_ENABLED;
   const { scene } = useGLTF(MODEL_URL[side]);
 
   const root = useRef<Group>(null);
@@ -119,13 +121,14 @@ export function Character({ side }: { side: Side }) {
 
   return (
     <group ref={root} position={[isLeft ? -CHAR_X : CHAR_X, STAND_Y[side], 0]}>
-      {xray && <XrayDriver />}
+      {/* ONE driver for the shared lens — mount it on the left figure only. */}
+      {xray && isLeft && <XrayDriver />}
       <group ref={breath} position-y={PIVOT_Y}>
         <group position-y={-PIVOT_Y}>
           <group ref={sway}>
             {/* Anatomy shares this exact transform, so breath/sway/lean move
                 both as one — the lens can never slide off what it scans. */}
-            {xray && <Anatomy />}
+            {xray && <Anatomy side={side} />}
             <primitive object={scene} />
           </group>
         </group>
@@ -139,7 +142,7 @@ export function Character({ side }: { side: Side }) {
         onPointerOver={(e) => {
           e.stopPropagation();
           hoverEnter(side);
-          if (xray) setLensHover(true);
+          if (xray) setLensHover(true, side);
         }}
         onPointerOut={() => {
           hoverLeave();
