@@ -505,27 +505,6 @@
   pointer-events: none;
 }
 
-.cy-protocol__caption {
-  text-align: center;
-  font-size: clamp(13px, 1.5vw, 18px);
-  font-weight: 300;
-  letter-spacing: 0.28em;
-  line-height: 1.9;
-  color: var(--text-hi);
-  white-space: nowrap;
-}
-
-.cy-protocol__caption .green {
-  color: var(--green);
-}
-
-.cy-protocol__rule {
-  width: 44px;
-  height: 1px;
-  background: var(--line-1);
-  margin: var(--sp-4) auto 0;
-}
-
 /* ————— SCROLL HINT ————— */
 .cy-hint {
   position: fixed;

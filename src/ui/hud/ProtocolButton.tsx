@@ -103,12 +103,10 @@ export function ProtocolButton() {
           +
         </span>
       </button>
-      <div className="cy-protocol__caption" aria-hidden="true">
-        INITIATE
-        <br />
-        CYPHERNAUT <span className="green">PROTOCOL</span>
-        <div className="cy-protocol__rule" />
-      </div>
+      {/* The caption is gone by art direction: it sat over the portal
+          reflection and repeated what the button's own hover hint already
+          says. The accessible name lives on the button's aria-label, and the
+          caption was aria-hidden, so nothing is lost for assistive tech. */}
     </div>
   );
 }
