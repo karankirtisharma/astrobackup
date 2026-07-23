@@ -714,19 +714,50 @@
   gap: var(--sp-2);
 }
 
+/* 3px, not 2: a 2px rule cannot carry a glow — the bloom is thicker than the
+   bar and the whole thing reads as a smudge instead of a lit filament. */
 .cy-boot__bar {
-  height: 2px;
+  height: 3px;
   background: var(--grey-4);
-  overflow: hidden;
+  border-radius: 2px;
+  overflow: visible;
   position: relative;
 }
 
+/* The fill is the light source. Three shadows, not one: a tight core that
+   keeps the edge crisp, a mid bloom, and a wide falloff that puts the glow on
+   the surrounding black. A single large shadow just looks blurry. */
 .cy-boot__bar i {
   position: absolute;
   inset: 0;
-  background: var(--green);
+  border-radius: 2px;
+  /* All green, no white. The hot end is a PALE GREEN rather than a white
+     highlight — white at the tip reads as a different light source sitting on
+     top of the bar instead of the bar's own filament running hotter. */
+  background: linear-gradient(90deg, var(--green-dim), var(--green) 58%, #dcff9e);
+  box-shadow:
+    0 0 4px var(--green),
+    0 0 12px var(--green-glow),
+    0 0 26px rgba(176, 245, 70, 0.28);
   transform-origin: left;
   transform: scaleX(0);
+}
+
+/* The leading edge — the brightest point, travelling with the fill. Anchored
+   to the fill's right edge, so it inherits the scaleX and stays welded to the
+   head of the bar without any JS. */
+.cy-boot__bar i::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  right: -1px;
+  width: 2px;
+  border-radius: 2px;
+  background: #eaffc4;
+  box-shadow:
+    0 0 6px #dcff9e,
+    0 0 16px var(--green);
 }
 
 .cy-boot__pct {
@@ -840,4 +871,70 @@
   display: inline-block;
   transform-style: preserve-3d;
   will-change: transform, opacity, filter;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Sound toggle
+   ───────────────────────────────────────────────────────────── */
+
+.cy-sound {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--grey-3);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.cy-sound:hover {
+  color: var(--text-hi);
+  border-color: var(--line-1);
+}
+
+.cy-sound.is-on {
+  color: var(--green);
+}
+
+.cy-sound__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+
+.cy-sound__bars i {
+  width: 2px;
+  height: 3px;
+  background: currentColor;
+  transform-origin: bottom;
+}
+
+/* Muted: the bars sit flat and still — the control reads its own state with
+   no label. Only the ON state animates. */
+.cy-sound.is-on .cy-sound__bars i {
+  animation: cy-sound-bar 1.1s ease-in-out infinite;
+}
+
+.cy-sound.is-on .cy-sound__bars i:nth-child(2) { animation-delay: 0.18s; }
+.cy-sound.is-on .cy-sound__bars i:nth-child(3) { animation-delay: 0.36s; }
+.cy-sound.is-on .cy-sound__bars i:nth-child(4) { animation-delay: 0.54s; }
+
+@keyframes cy-sound-bar {
+  0%, 100% { height: 3px; }
+  50% { height: 11px; }
+}
+
+/* The bars are decoration; the toggle still states itself via aria-pressed. */
+@media (prefers-reduced-motion: reduce) {
+  .cy-sound.is-on .cy-sound__bars i {
+    animation: none;
+    height: 8px;
+  }
 }

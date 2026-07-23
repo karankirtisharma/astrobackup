@@ -10,6 +10,7 @@ import { ManifestoSection } from './scroll/ManifestoSection';
 import { initConductor } from './motion/conductor';
 import { detectCapabilities } from './hooks/useCapabilities';
 import { useStore } from './state/store';
+import { initAudio } from './audio/bridge';
 import { DEBUG_FLAGS } from './debugFlags';
 
 /** Loader/shader/context crashes route to the static record, never a blank page. */
@@ -83,6 +84,11 @@ export default function App() {
     const dispose = initConductor();
     return dispose;
   }, []);
+
+  // Audio listens to the same store the conductor does, so cues can never
+  // disagree with the choreography. Nothing sounds until a real user gesture
+  // unlocks the context — the browser requires it and so does good manners.
+  useEffect(() => initAudio(), []);
 
   if (fallback) return <Fallback />;
 

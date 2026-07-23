@@ -3,6 +3,8 @@ import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { Logo } from '../../ui/chrome/Logo';
 import { AsciiGlitchRipple } from '../../ui/fx/AsciiGlitchRipple';
+import { SoundToggle } from '../../ui/chrome/SoundToggle';
+import { cue } from '../../audio/cues';
 
 gsap.registerPlugin(CustomEase);
 
@@ -237,8 +239,20 @@ export function SterlingGateNav() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isMenuOpen]);
 
-  const toggleMenu = () => setIsMenuOpen((prev) => !prev);
-  const closeMenu = () => setIsMenuOpen(false);
+  const toggleMenu = () =>
+    setIsMenuOpen((prev) => {
+      // Fired from the updater so the cue always matches the state actually
+      // committed, not a stale read of it.
+      if (prev) cue.menuClose();
+      else cue.menuOpen();
+      return !prev;
+    });
+  const closeMenu = () => {
+    setIsMenuOpen((prev) => {
+      if (prev) cue.menuClose();
+      return false;
+    });
+  };
 
   return (
     <div ref={containerRef} className="cy-sgnav">
@@ -257,6 +271,10 @@ export function SterlingGateNav() {
                   <span className="toggle-text">CORE // v2.4</span>
                   <i className="nav-status-dot" />
                 </div>
+
+                {/* Always reachable — the first control anyone wants if the
+                    audio is unwelcome. */}
+                <SoundToggle />
 
                 <button
                   type="button"
@@ -351,7 +369,15 @@ export function SterlingGateNav() {
               <ul className="menu-list">
                 {MENU.map((entry) => (
                   <li className="menu-list-item" data-shape={entry.shape} key={entry.label}>
-                    <a href="#" className="nav-link" onClick={(e) => e.preventDefault()}>
+                    <a
+                      href="#"
+                      className="nav-link"
+                      onMouseEnter={() => cue.hover()}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        cue.click();
+                      }}
+                    >
                       {/* The site's character-scramble, on every row. */}
                       <AsciiGlitchRipple
                         as="p"

@@ -5,6 +5,7 @@ import { Logo } from './Logo';
 import { useStore } from '../../state/store';
 import { bootFlags } from '../../hooks/useCapabilities';
 import { FlipFadeText } from '../fx/FlipFadeText';
+import { cue } from '../../audio/cues';
 
 /** Cycles beside the percentage while assets stream in. Deliberately verbs in
  *  the boot log's voice, so the two readouts feel like one machine talking. */
@@ -37,6 +38,19 @@ export function BootLoader() {
   const hiddenAt = useRef(0);
   const finishing = useRef(false);
 
+  // A tick as each log line lands. Silent unless the visitor has already
+  // clicked something — the browser will not start audio before a gesture, and
+  // boot usually precedes the first one. Wired anyway because it costs nothing
+  // and does fire for anyone who interacts during the boot.
+  const spokenLines = useRef(0);
+  useEffect(() => {
+    const n = LOG_LINES.filter(([at]) => Math.round(progress) >= at || at === 0).length;
+    if (n > spokenLines.current) {
+      spokenLines.current = n;
+      cue.bootTick();
+    }
+  }, [progress]);
+
   useEffect(() => {
     const id = window.setInterval(() => {
       if (finishing.current) return;
@@ -59,6 +73,7 @@ export function BootLoader() {
         finishing.current = true;
         window.clearInterval(id);
         setGranted(true);
+        cue.accessGranted();
         gsap.to('.cy-boot__granted', { opacity: 1, duration: 0.35, ease: 'power2.out' });
         gsap.to(root.current, {
           opacity: 0,

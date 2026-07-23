@@ -7,6 +7,7 @@ import { SYNC_DURATION } from '../../state/syncSim';
 import { COMPLETE_CHECKLIST, SIDE_STATUS } from '../../config/content';
 import { md } from '../../motion/motionConfig';
 import { MergePanel } from './MergePanel';
+import { cue } from '../../audio/cues';
 
 type HeaderMode = 'initiated' | 'merging' | 'complete';
 
@@ -78,6 +79,8 @@ export function SyncOverlay() {
         if (pct >= lastMilestone.current + 25 && liveRef.current) {
           lastMilestone.current = Math.floor(pct / 25) * 25;
           liveRef.current.textContent = `Synchronization ${lastMilestone.current} percent`;
+          // Hangs off the existing 25% ratchet, so it can never machine-gun.
+          cue.milestone();
         }
       }
       if (m >= 0.25) setHeader((h) => (h === 'initiated' ? 'merging' : h));

@@ -10,10 +10,14 @@
 /* The centre row is authored for a 460px column; the slab is a wide band, so
    it takes the full frame width and centres in the row instead of sitting on
    its bottom edge. */
+/* Sits LOW and narrow. Centred and full-width it covered both characters and
+   the portal — the ceremony's own subjects — with an instrument panel. Dropped
+   to the foot of the row it reads as a readout laid over the floor, and the
+   scene it is describing stays visible above it. */
 .cy-sync__center--merge {
-  width: min(1180px, calc(100vw - var(--frame-inset) * 2));
-  align-self: center;
-  margin-bottom: 0;
+  width: min(860px, calc(100vw - var(--frame-inset) * 2));
+  align-self: end;
+  margin-bottom: var(--sp-6);
 }
 
 .cy-merge {
@@ -112,6 +116,39 @@
   filter: contrast(1.06) brightness(1.04);
 }
 
+/* Green tint.
+   `mix-blend-mode: color` takes HUE + SATURATION from this layer and keeps the
+   LUMINANCE of the photograph underneath — so the anatomical detail survives
+   intact and only the colour shifts. A plain translucent green overlay would
+   instead wash the whole plate toward flat green and bury that detail, and a
+   hue-rotate filter would fight the near-zero saturation of a greyscale source
+   and do almost nothing.
+   0.34: enough that the plates clearly belong to the site's palette, low
+   enough that they still read as photographic rather than tinted plastic. */
+.cy-merge__plate-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+  mix-blend-mode: color;
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+/* A second, much weaker pass in the shadows only. Pure `color` blending leaves
+   the near-black areas neutral, so without this the plates read green in the
+   midtones and grey in the darks. Screen lifts just the low end. */
+.cy-merge__plate-img::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(176, 245, 70, 0.1), rgba(110, 154, 47, 0.16));
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .cy-merge__plate figcaption {
   display: flex;
   align-items: baseline;
@@ -149,11 +186,13 @@
   border: 1px solid rgba(233, 239, 234, 0.09);
   border-radius: 12px;
   background: rgba(4, 6, 5, 0.32);
-  padding: var(--sp-5) var(--sp-6);
+  /* Tighter than before — at 860px the panel has to stay a band, and the old
+     padding turned the narrower column into a tall box. */
+  padding: var(--sp-4) var(--sp-5);
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
   min-width: 0;
 }
 
@@ -206,7 +245,7 @@
   display: flex;
   align-items: baseline;
   gap: 0.06em;
-  font-size: 3.5rem;
+  font-size: 2.6rem;
   font-weight: 400;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -285,7 +324,7 @@
 }
 
 .cy-merge__eta b {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 400;
   letter-spacing: 0.08em;
   color: var(--text-hi);
