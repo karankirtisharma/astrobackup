@@ -40,6 +40,7 @@ const MENU: MenuEntry[] = [
 export function SterlingGateNav() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const firstRun = useRef(true);
 
   // Shape hover wiring — one ambient SVG per menu row.
   useEffect(() => {
@@ -115,18 +116,35 @@ export function SterlingGateNav() {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const ctx = gsap.context(() => {
-      const navWrap = containerRef.current!.querySelector('.nav-overlay-wrapper');
-      const menu = containerRef.current!.querySelector('.menu-content');
-      const overlay = containerRef.current!.querySelector('.overlay');
-      const bgPanels = containerRef.current!.querySelectorAll('.backdrop-layer');
-      const menuLinks = containerRef.current!.querySelectorAll('.nav-link');
-      const fadeTargets = containerRef.current!.querySelectorAll('[data-menu-fade]');
+    // NO gsap.context() HERE — and that is the whole reason the close was
+    // invisible. This effect is keyed to [isMenuOpen], so clicking Close runs
+    // the PREVIOUS run's cleanup first. With ctx.revert() that cleanup stripped
+    // every inline style the open timeline had written — including the
+    // `display: block` it set on .nav-overlay-wrapper — so CSS's `display: none`
+    // took over and the entire menu vanished in one frame. The close timeline
+    // then played out perfectly on something nobody could see.
+    //
+    // A plain timeline killed on cleanup is what this needs: the open's inline
+    // state survives, so the close has something to animate FROM.
+    const rootEl = containerRef.current;
+    const navWrap = rootEl.querySelector('.nav-overlay-wrapper');
+    const menu = rootEl.querySelector('.menu-content');
+    const overlay = rootEl.querySelector('.overlay');
+    const bgPanels = rootEl.querySelectorAll('.backdrop-layer');
+    const menuLinks = rootEl.querySelectorAll('.nav-link');
+    const fadeTargets = rootEl.querySelectorAll('[data-menu-fade]');
 
-      const menuButton = containerRef.current!.querySelector('.nav-close-btn');
-      const menuButtonTexts = menuButton?.querySelectorAll('p');
-      const menuButtonIcon = menuButton?.querySelector('.menu-button-icon');
+    const menuButton = rootEl.querySelector('.nav-close-btn');
+    const menuButtonTexts = menuButton?.querySelectorAll('p');
+    const menuButtonIcon = menuButton?.querySelector('.menu-button-icon');
 
+    // Nothing to close on mount — the menu starts shut via CSS.
+    if (firstRun.current) {
+      firstRun.current = false;
+      if (!isMenuOpen) return;
+    }
+
+    {
       const tl = gsap.timeline({ defaults: { ease: 'main', duration: 0.7 } });
 
       if (isMenuOpen) {
@@ -200,9 +218,14 @@ export function SterlingGateNav() {
           // open re-asserts every from-state via fromTo regardless.
           .set(navWrap, { display: 'none' });
       }
-    }, containerRef);
 
-    return () => ctx.revert();
+      // kill(), NOT revert(): killing stops this timeline but leaves the inline
+      // state it produced in place, which is exactly what the next timeline
+      // needs to animate from.
+      return () => {
+        tl.kill();
+      };
+    }
   }, [isMenuOpen]);
 
   // Escape closes.

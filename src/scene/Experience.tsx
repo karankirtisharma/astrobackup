@@ -2,6 +2,7 @@ import { Suspense, useCallback, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Preload, PerformanceMonitor } from '@react-three/drei';
 import { CameraRig } from './CameraRig';
+import { lensState } from './xray/lensUniforms';
 import { SceneEnvironment } from './SceneEnvironment';
 import { LiquidBackground } from './liquidbg/LiquidBackground';
 import { LightingRig } from './LightingRig';
@@ -51,6 +52,13 @@ export function Experience() {
     // would otherwise cascade high→mid→low and thrash the Floor/PostFX mount.
     if (!useStore.getState().booted) return;
     if (protocolRunning()) return;
+    // Never read the x-ray reveal's own cost as a capability signal. Hovering a
+    // character switches on a ~400k-triangle underlay for as long as the lens is
+    // open; that spike is the price of an interaction, not a measure of the
+    // machine. There is no onIncline here, so degradation is a ONE-WAY ratchet —
+    // without this guard a single hover can drop the session a tier for good
+    // (DPR 1.75 -> 1.25) and the whole image softens and never sharpens again.
+    if (lensState.cssRadius > 0) return;
     const { tier, setTier } = useStore.getState();
     if (tier === 'high') setTier('mid');
     else if (tier === 'mid') setTier('low');

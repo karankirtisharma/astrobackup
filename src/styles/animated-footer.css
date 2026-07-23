@@ -100,11 +100,11 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.01em;
-  color: var(--text-hi);
-  /* Green is "spent, not decorated with" (tokens.css), so the word stays near
-     -white and takes the protocol colour as a glow rather than a fill —
-     it reads green without losing its place at the top of the hierarchy. */
-  text-shadow: 0 0 0.32em var(--green-glow);
+  /* Green as a FILL, not a glow. A text-shadow was tried and cannot work here:
+     the mask above needs overflow:hidden, the glyphs nearly fill the box at
+     line-height 1, so the blur is hard-clipped at the box edge and renders as
+     a bright rectangle behind the word rather than a halo. */
+  color: var(--green);
   padding-bottom: 0.15em;
   margin-bottom: -0.15em;
 }

@@ -112,6 +112,17 @@ interface Hand {
   columns: number;
   cellSize: number;
   baselineOffset: number;
+  dpr: number;
+  /** The resting art, rasterised ONCE. See renderHand. */
+  base: HTMLCanvasElement;
+  /** Colour `base` was painted in, so it is only repainted if that changes. */
+  baseColor: string;
+  /** Date.now() past which no cell is lit — an O(1) "is anything happening". */
+  litUntil: number;
+  /** True when the visible canvas already matches the resting art. */
+  clean: boolean;
+  /** Cached bounds; refreshed on scroll/resize, not per pointer event. */
+  rect: DOMRect | null;
 }
 
 /** Build the ASCII cell grid for one image by sampling its brightness. */
@@ -271,6 +282,11 @@ export function AnimatedFooter({
 
     const hands: Hand[] = [];
     const wrappers = [leftWrap, rightWrap];
+    // Every getBoundingClientRect() forces layout. Upstream called one per hand
+    // on EVERY mousemove, which is a reflow storm during a cursor sweep. Bounds
+    // only actually change on scroll/resize, so they are cached and refreshed
+    // at most once a frame, and only when something moved.
+    let rectsDirty = true;
 
     // ── ASCII hands ──────────────────────────────────────────────────────
     const setupHand = (image: HTMLImageElement, canvas: HTMLCanvasElement) => {
@@ -292,6 +308,11 @@ export function AnimatedFooter({
       const glyphHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
       const baselineOffset = cellSize / 2 + glyphHeight / 2 - metrics.actualBoundingBoxDescent;
 
+      // Offscreen twin holding the resting art (see renderHand).
+      const base = document.createElement('canvas');
+      base.width = canvas.width;
+      base.height = canvas.height;
+
       hands.push({
         canvas,
         ctx,
@@ -301,7 +322,14 @@ export function AnimatedFooter({
         columns,
         cellSize,
         baselineOffset,
+        dpr,
+        base,
+        baseColor: '',
+        litUntil: 0,
+        clean: false,
+        rect: null,
       });
+      rectsDirty = true;
     };
 
     const loadHand = (src: string, canvas: HTMLCanvasElement) => {
@@ -321,23 +349,66 @@ export function AnimatedFooter({
     loadHand(leftImage, leftCanvasRef.current!);
     loadHand(rightImage, rightCanvasRef.current!);
 
-    const renderHand = (hand: Hand, now: number) => {
-      const { ctx, cellList, cellSize: cs, baselineOffset, columns: cols, rows } = hand;
-      const { charColor: lcc, hoverColor: lhc, hoverCharColor: lhcc } = liveRef.current;
-      ctx.clearRect(0, 0, cols * cs, rows * cs);
-
+    /** Rasterise the resting art once into the offscreen twin. */
+    const paintBase = (hand: Hand, color: string) => {
+      const { base, cellSize: cs, baselineOffset, columns: cols, rows, cellList, dpr } = hand;
+      const bctx = base.getContext('2d');
+      if (!bctx) return;
+      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      bctx.clearRect(0, 0, cols * cs, rows * cs);
+      bctx.font = `${fontSize}px monospace`;
+      bctx.textAlign = 'center';
+      bctx.textBaseline = 'alphabetic';
+      bctx.fillStyle = color;
       for (const cell of cellList) {
-        const x = cell.col * cs;
-        const y = cell.row * cs;
-        const isHighlighted = cell.highlightEndTime > now;
+        bctx.fillText(cell.char, cell.col * cs + cs / 2, cell.row * cs + baselineOffset);
+      }
+      hand.baseColor = color;
+    };
 
-        if (isHighlighted) {
+    /**
+     * PERFORMANCE: upstream re-issued a fillText for EVERY cell EVERY frame —
+     * ~4000 text draws per hand, ~8000 per frame, forever, on canvases that are
+     * 3200px wide. That is the footer's entire cost and it is almost all waste:
+     * the art never changes. Only the handful of cursor-lit cells do.
+     *
+     * So the resting art is rasterised once into an offscreen canvas, and a
+     * frame is now either
+     *   - nothing at all (no cell lit and the canvas already correct), or
+     *   - one blit of the cached art plus a redraw of the <=11 lit cells.
+     *
+     * Identical output, and the idle cost drops to zero. No feature is lost:
+     * the hover clusters, the ramp and the parallax all behave exactly as before.
+     */
+    const renderHand = (hand: Hand, now: number) => {
+      const { charColor: lcc, hoverColor: lhc, hoverCharColor: lhcc } = liveRef.current;
+      if (hand.baseColor !== lcc) {
+        paintBase(hand, lcc);
+        hand.clean = false;
+      }
+
+      const lit = now <= hand.litUntil;
+      // Resting, and the canvas already shows the resting art — draw nothing.
+      if (!lit && hand.clean) return;
+
+      const { ctx, cellSize: cs, baselineOffset, columns: cols, rows } = hand;
+      ctx.clearRect(0, 0, cols * cs, rows * cs);
+      ctx.drawImage(hand.base, 0, 0, cols * cs, rows * cs);
+
+      if (lit) {
+        for (const cell of hand.cellList) {
+          if (cell.highlightEndTime <= now) continue;
+          const x = cell.col * cs;
+          const y = cell.row * cs;
           ctx.fillStyle = lhc;
           ctx.fillRect(x, y, cs, cs);
+          ctx.fillStyle = lhcc;
+          ctx.fillText(cell.char, x + cs / 2, y + baselineOffset);
         }
-        ctx.fillStyle = isHighlighted ? lhcc : lcc;
-        ctx.fillText(cell.char, x + cs / 2, y + baselineOffset);
       }
+      // One final clean-up pass runs after the last highlight expires, then the
+      // canvas is left untouched until the cursor returns.
+      hand.clean = !lit;
     };
 
     // ── Pointer: hover highlight + parallax target ───────────────────────
@@ -362,25 +433,46 @@ export function AnimatedFooter({
     );
     proximity.observe(root);
 
+    /**
+     * PERFORMANCE: upstream scanned ALL ~4000 cells with a Math.sqrt each, per
+     * hand, on every single mousemove. The cells sit on a regular grid, so the
+     * cursor's cell can be indexed directly — only the neighbourhood within
+     * hoverRadius can possibly win, and anything outside it was going to be
+     * rejected by the radius test anyway. ~289 map lookups instead of ~8000
+     * distance computations, with identical results.
+     */
     const hoverHand = (hand: Hand, clientX: number, clientY: number) => {
-      const rect = hand.canvas.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
+      const rect = hand.rect;
+      if (!rect || rect.width === 0 || rect.height === 0) return;
       const mouseCol = ((clientX - rect.left) / rect.width) * hand.columns;
       const mouseRow = ((clientY - rect.top) / rect.height) * hand.rows;
 
+      const radius = liveRef.current.hoverRadius;
+      const r = Math.ceil(radius);
+      const c0 = Math.round(mouseCol);
+      const r0 = Math.round(mouseRow);
+
       let closest: Cell | null = null;
-      let closestDist = Infinity;
-      for (const cell of hand.cellList) {
-        const dx = mouseCol - cell.col;
-        const dy = mouseRow - cell.row;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = cell;
+      let closestSq = Infinity;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const cell = hand.cells.get(`${c0 + dx},${r0 + dy}`);
+          if (!cell) continue;
+          const ex = mouseCol - cell.col;
+          const ey = mouseRow - cell.row;
+          const sq = ex * ex + ey * ey;
+          if (sq < closestSq) {
+            closestSq = sq;
+            closest = cell;
+          }
         }
       }
-      if (closest && closestDist <= liveRef.current.hoverRadius) {
+
+      if (closest && closestSq <= radius * radius) {
         highlightCluster(hand.cells, closest);
+        // O(1) "something is lit until" marker so renderHand can skip whole
+        // frames without inspecting every cell.
+        hand.litUntil = Date.now() + HIGHLIGHT_LIFETIME + CLUSTER_SIZE * 10;
       }
     };
 
@@ -392,13 +484,16 @@ export function AnimatedFooter({
     let glitchCursor = -1;
     let glitchDirty = false;
 
+    // Cached alongside the hand bounds — same reflow argument.
+    let glyphRects: DOMRect[] = [];
+
     /** Spawn a wave from whichever character the cursor is nearest. */
     const glitchAt = (clientX: number, clientY: number) => {
       let nearest = -1;
       let best = Infinity;
-      for (let i = 0; i < glyphSpans.length; i++) {
-        const r = glyphSpans[i].getBoundingClientRect();
-        if (r.width === 0) continue;
+      for (let i = 0; i < glyphRects.length; i++) {
+        const r = glyphRects[i];
+        if (!r || r.width === 0) continue;
         const dx = clientX - (r.left + r.width / 2);
         const dy = clientY - (r.top + r.height / 2);
         const d = dx * dx + dy * dy;
@@ -460,10 +555,26 @@ export function AnimatedFooter({
     window.addEventListener('mousemove', onMouseMove);
 
     // ── Unified render loop: ASCII + parallax + reveal curtain ───────────
+    // Bounds move only when the page scrolls or the window resizes; both are
+    // passive and merely flag, so no layout is read inside the event itself.
+    const invalidateRects = () => {
+      rectsDirty = true;
+    };
+    window.addEventListener('scroll', invalidateRects, { passive: true });
+    window.addEventListener('resize', invalidateRects);
+
     let rafId = 0;
     const frame = () => {
       rafId = requestAnimationFrame(frame);
       if (!onScreen) return;
+
+      // At most one batched layout read per frame, instead of one per hand per
+      // pointer event.
+      if (rectsDirty) {
+        rectsDirty = false;
+        for (const hand of hands) hand.rect = hand.canvas.getBoundingClientRect();
+        glyphRects = glyphSpans.map((el) => el.getBoundingClientRect());
+      }
 
       const now = Date.now();
       for (const hand of hands) renderHand(hand, now);
@@ -551,6 +662,8 @@ export function AnimatedFooter({
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('scroll', invalidateRects);
+      window.removeEventListener('resize', invalidateRects);
       observer?.disconnect();
       proximity.disconnect();
       gsap.killTweensOf([curtain, ...chars]);

@@ -51,9 +51,21 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
         uniform vec2 uLensCenter;
         uniform float uLensRadius;`
       )
+      // ANCHORED AT THE TOP OF main(), NOT THE BOTTOM.
+      //
+      // This used to splice into <dithering_fragment>, the LAST include in the
+      // physical shader — so every fragment of the ~400k-triangle underlay ran
+      // the full map/normal/emissive/ao chain, lights_physical across 8 punctual
+      // lights and the env IBL, and was only then thrown away. Nearly all of
+      // that work was for pixels outside a 130x85px window.
+      //
+      // <clipping_planes_fragment> is the first chunk in main() and nothing
+      // between the two anchors writes depth or feeds the decision (it depends
+      // only on gl_FragCoord and the lens uniforms), so rejecting here is
+      // identical output for a fraction of the shading cost.
       .replace(
-        '#include <dithering_fragment>',
-        /* glsl */ `#include <dithering_fragment>
+        '#include <clipping_planes_fragment>',
+        /* glsl */ `#include <clipping_planes_fragment>
         {
           // Rect half-size from the shared radius. Closed lens => radius 0 and
           // the centre parked far offscreen, so _d > 0 everywhere: the body
@@ -71,7 +83,9 @@ export function patchXrayMaterial(mat: Material, mode: Mode): void {
   // never saw onBeforeCompile, so uLens* are never uploaded and the surface
   // renders garbage or vanishes. Keyed per mode AND per cut-shape so a stale
   // program from the old blended build can never be reused.
-  mat.customProgramCacheKey = () => `xray-rect-cut-${mode}`;
+  // The key MUST change whenever the injected GLSL or its anchor changes, or
+  // three hands this material a program compiled against the old source.
+  mat.customProgramCacheKey = () => `xray-rect-cut-early-${mode}`;
 
   mat.needsUpdate = true;
 }
