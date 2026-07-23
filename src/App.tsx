@@ -58,15 +58,25 @@ export default function App() {
     if (caps.mode === 'fallback') useStore.getState().setFallback();
     else useStore.getState().setTier(DEBUG_FLAGS.tierOverride ?? caps.tier);
 
-    if (DEBUG_FLAGS.motionOverride) {
-      useStore.getState().setReducedMotion(DEBUG_FLAGS.motionOverride === 'reduced');
-      return;
-    }
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    useStore.getState().setReducedMotion(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => useStore.getState().setReducedMotion(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
+    // FULL MOTION IS THE DEFAULT — a deliberate product decision.
+    //
+    // This used to read prefers-reduced-motion and collapse every animation in
+    // the experience when the OS asked for it. That is the accessible default,
+    // and it is why the site looked completely static on machines with Windows'
+    // "Animation effects" turned off while ?motion=full appeared to "fix" it —
+    // the flag was not adding anything, it was overriding the OS.
+    //
+    // The site is a motion piece, so it now animates by default and reduced
+    // motion is opt-IN via ?motion=reduced. The whole reduced-motion code path
+    // is still intact and exercised by that flag — md()/me() still collapse
+    // durations, the lens still snaps, the manifesto still fades — so restoring
+    // the accessible behaviour is a one-line revert: delete the branch below
+    // and put back the matchMedia listener.
+    //
+    // TRADE-OFF, stated plainly: visitors with vestibular disorders who have
+    // asked their OS for reduced motion will now get the full camera dolly,
+    // parallax and scroll choreography anyway.
+    useStore.getState().setReducedMotion(DEBUG_FLAGS.motionOverride === 'reduced');
   }, []);
 
   useGSAP(() => {

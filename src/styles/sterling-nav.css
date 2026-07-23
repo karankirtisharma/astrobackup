@@ -1,0 +1,321 @@
+/* ─────────────────────────────────────────────────────────────
+   Sterling Gate kinetic navigation
+   Pair file for components/ui/sterling-gate-kinetic-navigation.tsx
+
+   The upstream snippet shipped markup + GSAP timelines but NO layout — only
+   a handful of :root variables. Everything below is authored from what the
+   timelines require, themed to the CYPHERNAUT tokens. Every rule marked
+   "REQUIRED BY JS" is depended on by an animation; changing it breaks motion,
+   not just looks.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* The one variable from the upstream snippet that is actually referenced.
+     The rest of its palette (indigo primary, neutral ramp, container sizes)
+     is deliberately dropped — this file themes to tokens.css instead. */
+  --cubic-default: cubic-bezier(0.65, 0.05, 0, 1);
+}
+
+/* The HUD root is pointer-events:none so the 3D scene stays reachable; the
+   nav has to opt its own interactive parts back in. */
+.cy-sgnav {
+  pointer-events: none;
+}
+
+.cy-sgnav a,
+.cy-sgnav button {
+  pointer-events: auto;
+}
+
+/* ── Header bar ─────────────────────────────────────────────── */
+
+/* Sits ABOVE .nav-overlay-wrapper (+1) on purpose. The open timeline swaps
+   this button's label to "Close" and rotates its icon to 315deg — that only
+   means anything if the button is still reachable once the overlay is up.
+   At the same z-index as the overlay it is buried and the menu can only be
+   dismissed by Escape or a backdrop click. */
+.cy-sgnav .site-header-wrapper {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: calc(var(--z-nav) + 2);
+}
+
+.cy-sgnav .container.is--full {
+  width: 100%;
+  padding-inline: var(--frame-inset);
+}
+
+.cy-sgnav .nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-5);
+  height: 64px;
+}
+
+.cy-sgnav .nav-logo-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--text-hi);
+  text-decoration: none;
+}
+
+.cy-sgnav .nav-wordmark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: var(--text-hi);
+}
+
+.cy-sgnav .nav-row__right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+
+.cy-sgnav .nav-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: var(--grey-3);
+}
+
+.cy-sgnav .nav-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+}
+
+/* ── Menu button (text swap + icon rotate) ──────────────────── */
+
+.cy-sgnav .nav-close-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  background: none;
+  border: 1px solid var(--line-1);
+  border-radius: 2px;
+  padding: 8px 14px;
+  color: var(--text-hi);
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.cy-sgnav .nav-close-btn:hover {
+  border-color: var(--line-green);
+  background: var(--green-tint);
+}
+
+/* REQUIRED BY JS: the two <p> are stacked and tweened yPercent 0 -> -100 to
+   swap "Menu" for "Close". Without a fixed height and overflow:hidden they
+   render as two visible lines and the swap slides nothing out of view. */
+.cy-sgnav .menu-button-text {
+  position: relative;
+  overflow: hidden;
+  /* font-size MUST be declared here, not only on the children: the mask height
+     is 1em, and 1em resolves against THIS element's font-size. Left to inherit
+     (16px) the window is taller than one 11px line and "Close" sits visibly
+     below "Menu" instead of being hidden until the swap. */
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  height: 1em;
+}
+
+.cy-sgnav .menu-button-text .p-large {
+  font-size: inherit;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  height: 1em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.cy-sgnav .icon-wrap {
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+}
+
+/* REQUIRED BY JS: rotated 0 -> 315deg on open. */
+.cy-sgnav .menu-button-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+  color: currentColor;
+}
+
+/* ── Overlay + sliding panel ────────────────────────────────── */
+
+/* REQUIRED BY JS: the timeline sets display block/none on this wrapper. It
+   MUST default to none, or the menu is on screen before it is ever opened. */
+.cy-sgnav .nav-overlay-wrapper {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-nav) + 1);
+}
+
+.cy-sgnav .overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 4, 3, 0.72);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+/* REQUIRED BY JS: tweened xPercent 0 <-> 120, so it must be positioned and
+   sized for a percentage translate to carry it fully off-screen. */
+.cy-sgnav .menu-content {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: min(620px, 100vw);
+  overflow: hidden;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cy-sgnav .menu-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* REQUIRED BY JS: three layers tween xPercent 101 -> 0 on a 0.12 stagger,
+   which is the layered-curtain entrance. Later siblings paint on top, so the
+   unmodified third layer is the surface the menu actually sits on. */
+.cy-sgnav .backdrop-layer {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-0);
+  border-left: 1px solid var(--line-1);
+}
+
+.cy-sgnav .backdrop-layer.first {
+  background: var(--green-dim);
+}
+
+.cy-sgnav .backdrop-layer.second {
+  background: #0b0f0b;
+}
+
+/* ── Ambient shapes ─────────────────────────────────────────── */
+
+.cy-sgnav .ambient-background-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* REQUIRED BY JS: hover adds/removes .active; the shape's children are then
+   tweened. Hidden by default so only the hovered row's shape is visible. */
+.cy-sgnav .bg-shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.cy-sgnav .bg-shape.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.cy-sgnav .shape-element {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ── Menu list ──────────────────────────────────────────────── */
+
+.cy-sgnav .menu-content-wrapper {
+  position: relative;
+  z-index: 1;
+  padding: var(--sp-8) var(--sp-7);
+}
+
+.cy-sgnav .menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+/* REQUIRED BY JS: .nav-link is tweened yPercent 140 -> 0 with a rotation.
+   This element is the MASK that clip those links on the way in — without
+   overflow:hidden the rows are simply visible below their slot and there is
+   no reveal at all. */
+.cy-sgnav .menu-list-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.cy-sgnav .nav-link {
+  position: relative;
+  display: block;
+  padding: 0.12em 0.24em;
+  text-decoration: none;
+  color: var(--text-hi);
+  will-change: transform;
+}
+
+.cy-sgnav .nav-link-text {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  /* Monospace for the same reason as the footer wordmark: these carry the
+     AsciiGlitchRipple, and in a proportional face every substituted glyph
+     changes width and shifts the row. */
+  font-family: var(--font-mono);
+  font-size: clamp(2rem, 6.5vw, 3.6rem);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  transition: color 0.28s ease;
+}
+
+.cy-sgnav .nav-link:hover .nav-link-text {
+  color: var(--green);
+}
+
+/* Wipes in behind the row on hover. */
+.cy-sgnav .nav-link-hover-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(90deg, var(--green-tint), transparent 70%);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.4s var(--cubic-default, cubic-bezier(0.65, 0.05, 0, 1));
+}
+
+.cy-sgnav .nav-link:hover .nav-link-hover-bg {
+  transform: scaleX(1);
+}
+
+@media (max-width: 767px) {
+  .cy-sgnav .menu-content-wrapper {
+    padding: var(--sp-7) var(--sp-5);
+  }
+  .cy-sgnav .nav-wordmark {
+    display: none;
+  }
+}

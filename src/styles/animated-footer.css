@@ -1,0 +1,115 @@
+/* ─────────────────────────────────────────────────────────────
+   Animated footer (vendored: components/ui/animated-footer.tsx)
+
+   This file IS the component's layout. Upstream ships Tailwind utilities;
+   this project has no Tailwind, so each utility is reproduced here 1:1.
+   They are not decoration — the classes below are what make the footer
+   work at all. Change one side, change the other.
+   ───────────────────────────────────────────────────────────── */
+
+/* The 85vh band the footer is mounted in. z-index matches .cy-manifesto so it
+   composites ABOVE the sticky hero canvas rather than behind it. */
+.cy-af-section {
+  position: relative;
+  z-index: 5;
+  height: 85vh;
+  width: 100%;
+  background: var(--bg-0);
+}
+
+/* was: relative h-full w-full overflow-hidden
+   Height is 100% of the 85vh section — the footer sizes to its parent, so the
+   parent MUST have a resolved height or the canvases collapse. */
+.cy-af {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  /* was: text-black dark:text-white — this app is permanently dark. Overridden
+     by the inline style when a textColor prop is passed. */
+  color: #ffffff;
+}
+
+/* was: pointer-events-none absolute inset-0 flex items-center justify-between
+   pointer-events:none matters — the hover highlight is driven by a window
+   mousemove listener, so the canvases must never eat clicks. */
+.cy-af__hands {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* was: relative w-2/5 min-w-[200px] will-change-transform
+   The JS writes .style.transform on this element every frame. */
+.cy-af__hand {
+  position: relative;
+  width: 40%;
+  min-width: 200px;
+  will-change: transform;
+}
+
+/* was: block h-auto w-full
+   display:block kills the inline-element descender gap; h-auto keeps the
+   canvas's intrinsic aspect ratio while width tracks the wrapper. */
+.cy-af__canvas {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+/* was: absolute inset-x-0 bottom-0 flex items-end justify-center gap-4 p-8 */
+.cy-af__headings {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+/* was: overflow-hidden font-medium leading-none tracking-tight
+        pb-[0.15em] -mb-[0.15em]
+
+   THE LOAD-BEARING ONE. Characters start at yPercent 125 (below the baseline)
+   and slide up; `overflow: hidden` is the mask that clips them on the way in.
+   Without it there is no reveal — the letters simply sit offset below.
+
+   The padding/negative-margin pair gives descenders room inside that mask
+   without adding any height to the layout: remove the padding and glyph tails
+   are shaved off; remove the negative margin and the footer grows by 0.15em.
+
+   font-size was an INLINE style upstream and lives here instead. It must not
+   be dropped: without it an <h2> falls back to the UA default of 24px and the
+   whole display line renders at body-copy size. `cqw` is a container query
+   unit, so it resolves against container-type: inline-size — which the
+   component sets inline on the root. The two are a pair. */
+.cy-af__heading {
+  overflow: hidden;
+  font-size: clamp(2rem, 13cqw, 11rem);
+  /* MONOSPACE IS LOAD-BEARING, not a style choice. The heading glitch swaps
+     each character for a ramp glyph every frame; in a proportional face every
+     swap changes the advance width and the whole wordmark reflows and jitters.
+     In mono the substitution is width-identical, so the line never moves.
+     It also ties the wordmark to the ASCII art beside it. */
+  font-family: var(--font-mono);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--text-hi);
+  /* Green is "spent, not decorated with" (tokens.css), so the word stays near
+     -white and takes the protocol colour as a glow rather than a fill —
+     it reads green without losing its place at the top of the hierarchy. */
+  text-shadow: 0 0 0.32em var(--green-glow);
+  padding-bottom: 0.15em;
+  margin-bottom: -0.15em;
+}
+
+/* was: inline-block — a plain inline span cannot be transformed. */
+.cy-af__char {
+  display: inline-block;
+}

@@ -5,6 +5,13 @@ import { useGSAP } from '@gsap/react';
 import { useStore, send } from '../state/store';
 import { MANIFESTO_LINES } from '../config/content';
 import { Logo } from '../ui/chrome/Logo';
+import { AnimatedFooter } from '../components/ui/animated-footer';
+
+/** BASE_URL-aware: the site may be served from a subpath (GitHub Pages), where
+ *  a root-absolute "/animated-footer/..." would 404 and the ASCII art would
+ *  silently render as an empty canvas — the image load failure is not fatal. */
+const SHIP_LEFT = `${import.meta.env.BASE_URL}animated-footer/ship-left.jpg`;
+const SHIP_RIGHT = `${import.meta.env.BASE_URL}animated-footer/ship-right.jpg`;
 
 /**
  * The editorial reward. Inert and unreachable until the protocol completes;
@@ -51,6 +58,7 @@ export function ManifestoSection() {
   );
 
   return (
+    <>
     <section
       ref={root}
       className="cy-manifesto"
@@ -83,5 +91,29 @@ export function ManifestoSection() {
         </div>
       </div>
     </section>
+
+    {/* Sibling, not a child: .cy-manifesto is a centred grid with 18vh of
+        bottom padding and a frame inset, which would box the footer in — it
+        needs to be full-bleed. Gated by `unlocked` like the manifesto, so it
+        stays unreachable until the protocol completes. */}
+    <section
+      className="cy-af-section"
+      aria-label="Site footer"
+      inert={!unlocked}
+      aria-hidden={!unlocked}
+    >
+      <AnimatedFooter
+        headingLines={['CYPHERNAUT']}
+        leftImage={SHIP_LEFT}
+        rightImage={SHIP_RIGHT}
+        background="#050505"
+        /* Protocol green, same relationship as the upstream orange pair: a
+           deep resting glyph that the cursor lights to the full site green. */
+        charColor="#3f6b14"
+        hoverColor="#b0f546"
+        hoverCharColor="#050505"
+      />
+    </section>
+    </>
   );
 }

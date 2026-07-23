@@ -17,6 +17,8 @@ import './styles/hud.css';
 import './styles/dossier.css';
 import './styles/sync.css';
 import './styles/manifesto.css';
+import './styles/animated-footer.css';
+import './styles/sterling-nav.css';
 
 import App from './App';
 import CinematicScene from './cinematic/CinematicScene';

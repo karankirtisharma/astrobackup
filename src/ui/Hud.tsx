@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useStore, send } from '../state/store';
-import { Nav } from './chrome/Nav';
+import { SterlingGateNav } from '../components/ui/sterling-gate-kinetic-navigation';
 import { FrameDecorations } from './chrome/FrameDecorations';
 import { StatusFooter } from './chrome/StatusFooter';
 import { CharacterLabel } from './hud/CharacterLabel';
@@ -73,7 +73,7 @@ export function Hud() {
     <div data-scene={scene} style={{ pointerEvents: 'none' }}>
       <div className="cy-grain" aria-hidden="true" />
       <FrameDecorations />
-      <Nav />
+      <SterlingGateNav />
 
       {/* Keyboard path into the dossiers — sighted-mouse users raycast the 3D.
           Disabled outside explorable scenes so the affordance mirrors the FSM. */}
