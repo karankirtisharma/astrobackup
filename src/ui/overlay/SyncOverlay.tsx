@@ -3,9 +3,10 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useStore, send } from '../../state/store';
 import { protocolStartedAt } from '../../motion/conductor';
-import { SYNC_TASKS, SYNC_DURATION } from '../../state/syncSim';
+import { SYNC_DURATION } from '../../state/syncSim';
 import { COMPLETE_CHECKLIST, SIDE_STATUS } from '../../config/content';
 import { md } from '../../motion/motionConfig';
+import { MergePanel } from './MergePanel';
 
 type HeaderMode = 'initiated' | 'merging' | 'complete';
 
@@ -23,7 +24,7 @@ export function SyncOverlay() {
   const root = useRef<HTMLDivElement>(null);
   const pctRef = useRef<HTMLElement>(null);
   const etaRef = useRef<HTMLElement>(null);
-  const tasksRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
   const startedAt = useRef(performance.now());
   const lastPct = useRef(-1);
@@ -55,12 +56,23 @@ export function SyncOverlay() {
     lastMilestone.current = 0;
 
     const apply = (m: number) => {
+      // The meter advances EVERY frame, not just on whole-percent ticks — it is
+      // a continuous mark and would visibly step at 1% granularity. Transform
+      // only, so a per-frame write costs no layout.
+      if (fillRef.current) fillRef.current.style.transform = `scaleX(${m})`;
+
       const pct = Math.floor(m * 100);
       if (pct !== lastPct.current) {
         lastPct.current = pct;
         if (pctRef.current) pctRef.current.textContent = pad(pct);
         if (etaRef.current) {
-          etaRef.current.textContent = `${Math.max((1 - m) * SYNC_DURATION, 0).toFixed(1)} SECS`;
+          // A clock rather than "12.4 SECS": the slab reads as an instrument,
+          // and fixed-width MM:SS:CS never reflows the centred column as the
+          // digits change.
+          const rem = Math.max((1 - m) * SYNC_DURATION, 0);
+          etaRef.current.textContent = `${pad(Math.floor(rem / 60))}:${pad(
+            Math.floor(rem % 60)
+          )}:${pad(Math.floor((rem % 1) * 100))}`;
         }
         // milestone announcements for screen readers
         if (pct >= lastMilestone.current + 25 && liveRef.current) {
@@ -69,19 +81,6 @@ export function SyncOverlay() {
         }
       }
       if (m >= 0.25) setHeader((h) => (h === 'initiated' ? 'merging' : h));
-      if (tasksRef.current) {
-        const tasks = useStore.getState().taskValues;
-        tasksRef.current.querySelectorAll<HTMLElement>('.cy-task').forEach((row, i) => {
-          const v = tasks[i] ?? 0;
-          const bar = row.querySelector<HTMLElement>('.t-bar i');
-          const label = row.querySelector<HTMLElement>('.t-pct');
-          if (bar) bar.style.transform = `scaleX(${v})`;
-          if (label) {
-            const p = `${pad(Math.floor(v * 100))}%`;
-            if (label.textContent !== p) label.textContent = p;
-          }
-        });
-      }
     };
 
     apply(useStore.getState().syncMaster);
@@ -131,10 +130,18 @@ export function SyncOverlay() {
           delay: md(0.8),
         }
       );
+      // The slab arrives as one object, then fills. Exponential ease-out, not
+      // the previous back.out overshoot — a 1180px instrument panel that
+      // bounces reads as a toy.
       gsap.fromTo(
-        q('.cy-sync__panel'),
-        { opacity: 0, scale: 0.94 },
-        { opacity: 1, scale: 1, duration: md(0.5), ease: 'back.out(1.4)', delay: md(1.25) }
+        q('.cy-sync__panel, .cy-merge__frame'),
+        { opacity: 0, scale: 0.97, y: 10 },
+        { opacity: 1, scale: 1, y: 0, duration: md(0.7), ease: 'expo.out', delay: md(1.15) }
+      );
+      gsap.fromTo(
+        q('.cy-merge__plate, .cy-merge__readout'),
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: md(0.55), ease: 'expo.out', stagger: 0.08, delay: md(1.4) }
       );
       gsap.fromTo(
         q('.cy-sync__corner'),
@@ -155,15 +162,17 @@ export function SyncOverlay() {
     () => {
       if (!syncing || !root.current) return;
       const q = gsap.utils.selector(root.current);
+      // The scale draws itself in as the merge actually starts, so the meter
+      // reads as arming rather than simply existing.
       gsap.fromTo(
-        q('.cy-tasklist .cy-task'),
-        { opacity: 0, y: 8 },
-        { opacity: 1, y: 0, duration: md(0.4), ease: 'expo.out', stagger: 0.07 }
+        q('.cy-merge__ticks i'),
+        { opacity: 0, scaleY: 0.3 },
+        { opacity: 1, scaleY: 1, duration: md(0.35), ease: 'expo.out', stagger: 0.025 }
       );
       gsap.fromTo(
-        q('.cy-sync__side .s-field, .cy-sync__side .s-title'),
-        { opacity: 0, y: 8 },
-        { opacity: 1, y: 0, duration: md(0.45), ease: 'expo.out', stagger: 0.06 }
+        q('.cy-merge__cross'),
+        { opacity: 0 },
+        { opacity: 0.55, duration: md(0.4), ease: 'power2.out', stagger: 0.05 }
       );
     },
     { dependencies: [syncing], scope: root, revertOnUpdate: true }
@@ -256,20 +265,11 @@ export function SyncOverlay() {
     <div className="cy-sync" ref={root} style={{ opacity: 0 }}>
       <div className="visually-hidden" aria-live="polite" ref={liveRef} />
 
+      {/* Only the completion header survives as a standalone stack. During the
+          ceremony the merge slab states the phase itself, and repeating
+          "MERGING IDENTITIES" above a panel that already says it was the old
+          overlay's core problem: the same fact announced three times. */}
       <div className="cy-sync__header" aria-hidden="true">
-        {header === 'initiated' && (
-          <>
-            <div className="cy-sync__phase">PROTOCOL INITIATED</div>
-            <div className="cy-sync__title">CYPHERNAUT PROTOCOL</div>
-            <div className="cy-sync__ver">VER. 3.7.2</div>
-          </>
-        )}
-        {header === 'merging' && (
-          <>
-            <div className="cy-sync__title">MERGING IDENTITIES</div>
-            <div className="cy-sync__ver">CYPHERNAUT PROTOCOL</div>
-          </>
-        )}
         {header === 'complete' && (
           <>
             <div className="cy-sync__title cy-sync__title--green">PROTOCOL COMPLETE</div>
@@ -295,34 +295,12 @@ export function SyncOverlay() {
         </svg>
       )}
 
-      <div className="cy-sync__center" aria-hidden="true">
+      <div
+        className={`cy-sync__center${complete ? '' : ' cy-sync__center--merge'}`}
+        aria-hidden="true"
+      >
         {!complete ? (
-          <div className="cy-sync__panel">
-            <div className="cy-sync__panel-label">
-              {syncing ? 'SYNCHRONIZATION' : 'SYNCING IDENTITIES'}
-            </div>
-            <div className="cy-sync__pct num">
-              {/* imperative nodes: rendered empty, filled by subscription */}
-              <span ref={pctRef} />
-              <small>%</small>
-            </div>
-            <div className="cy-sync__sub">
-              <span>ESTIMATED TIME</span>
-              <b className="num" ref={etaRef} />
-            </div>
-            <div className="cy-tasklist" ref={tasksRef}>
-              {syncing &&
-                SYNC_TASKS.map((t) => (
-                  <div className="cy-task" key={t}>
-                    <span className="t-label">{t}</span>
-                    <span className="t-bar">
-                      <i />
-                    </span>
-                    <span className="t-pct num" />
-                  </div>
-                ))}
-            </div>
-          </div>
+          <MergePanel pctRef={pctRef} etaRef={etaRef} fillRef={fillRef} syncing={syncing} />
         ) : (
           <>
             <div className="cy-sync__panel cy-checklist">
@@ -349,8 +327,10 @@ export function SyncOverlay() {
         )}
       </div>
 
-      {/* side identity columns */}
-      {(syncing || complete) && (
+      {/* Side identity columns — completion only. During the merge the slab's
+          own plates name both identities; a second set of identity columns
+          flanking it was pure redundancy. */}
+      {complete && (
         <>
           <div className="cy-sync__side cy-sync__side--left" aria-hidden="true">
             <div className="s-title">

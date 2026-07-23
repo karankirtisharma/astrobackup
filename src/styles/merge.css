@@ -1,0 +1,321 @@
+/* ─────────────────────────────────────────────────────────────
+   MERGE SEQUENCE — the ceremony instrument panel (ui/overlay/MergePanel).
+
+   Surface values are inherited from .cy-dossier, not reinvented: same 22px
+   blur, same 125% saturate, same hairline and inset highlight. One glass
+   vocabulary across the product, so the ceremony reads as the same object
+   family as the dossiers rather than a second visual system.
+   ───────────────────────────────────────────────────────────── */
+
+/* The centre row is authored for a 460px column; the slab is a wide band, so
+   it takes the full frame width and centres in the row instead of sitting on
+   its bottom edge. */
+.cy-sync__center--merge {
+  width: min(1180px, calc(100vw - var(--frame-inset) * 2));
+  align-self: center;
+  margin-bottom: 0;
+}
+
+.cy-merge {
+  width: 100%;
+}
+
+/* ── The slab ───────────────────────────────────────────────── */
+
+.cy-merge__frame {
+  position: relative;
+  border: 1px solid rgba(233, 239, 234, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(170deg, rgba(15, 19, 16, 0.55), rgba(7, 10, 8, 0.68));
+  -webkit-backdrop-filter: blur(22px) saturate(125%);
+  backdrop-filter: blur(22px) saturate(125%);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(233, 239, 234, 0.07);
+  padding: var(--sp-4);
+  display: grid;
+  gap: var(--sp-4);
+  overflow: hidden;
+}
+
+/* ── Header strip ───────────────────────────────────────────── */
+
+.cy-merge__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--line-2);
+}
+
+.cy-merge__head-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  /* grey-1, not grey-3: this is the panel's only title and has to clear 4.5:1
+     against the glass, which sits lighter than the raw background. */
+  color: var(--grey-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cy-merge__head-dots {
+  display: flex;
+  gap: 5px;
+  flex: none;
+}
+
+.cy-merge__head-dots i {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(233, 239, 234, 0.3);
+}
+
+/* ── Three-up body ──────────────────────────────────────────── */
+
+.cy-merge__body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 2.3fr) minmax(0, 0.92fr);
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+
+/* ── Identity plates ────────────────────────────────────────── */
+
+.cy-merge__plate {
+  margin: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.cy-merge__plate-img {
+  position: relative;
+  border: 1px solid rgba(233, 239, 234, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(233, 239, 234, 0.02);
+}
+
+.cy-merge__plate-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The plates are rendered art on near-black; a touch of lift keeps them from
+     going muddy once the glass blur sits on top of them. */
+  filter: contrast(1.06) brightness(1.04);
+}
+
+.cy-merge__plate figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid rgba(233, 239, 234, 0.09);
+  border-radius: 10px;
+  background: rgba(233, 239, 234, 0.03);
+  font-family: var(--font-mono);
+  min-width: 0;
+}
+
+.cy-merge__plate figcaption b {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--text-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cy-merge__plate figcaption span {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--grey-3);
+  flex: none;
+}
+
+/* ── Centre readout ─────────────────────────────────────────── */
+
+.cy-merge__readout {
+  position: relative;
+  border: 1px solid rgba(233, 239, 234, 0.09);
+  border-radius: 12px;
+  background: rgba(4, 6, 5, 0.32);
+  padding: var(--sp-5) var(--sp-6);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+/* Registration crosshairs — drawn, not imported. */
+.cy-merge__cross {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  opacity: 0.55;
+}
+
+.cy-merge__cross::before,
+.cy-merge__cross::after {
+  content: '';
+  position: absolute;
+  background: rgba(233, 239, 234, 0.5);
+}
+
+.cy-merge__cross::before {
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 1px;
+}
+
+.cy-merge__cross::after {
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+}
+
+.cy-merge__cross--tl { top: 10px; left: 10px; }
+.cy-merge__cross--tr { top: 10px; right: 10px; }
+.cy-merge__cross--bl { bottom: 10px; left: 10px; }
+.cy-merge__cross--br { bottom: 10px; right: 10px; }
+
+.cy-merge__label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  padding-left: 0.28em;
+  color: var(--text-hi);
+}
+
+/* Fixed rem, not clamp: this panel holds one size on desktop and collapses
+   structurally below, which is the product-register rule. */
+.cy-merge__pct {
+  display: flex;
+  align-items: baseline;
+  gap: 0.06em;
+  font-size: 3.5rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--white-pure);
+}
+
+.cy-merge__pct small {
+  font-size: 0.42em;
+  letter-spacing: 0;
+  color: var(--grey-1);
+}
+
+/* ── Meter ──────────────────────────────────────────────────── */
+
+.cy-merge__meter {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+}
+
+.cy-merge__ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1px;
+}
+
+.cy-merge__ticks i {
+  width: 1px;
+  height: 5px;
+  background: rgba(233, 239, 234, 0.28);
+}
+
+.cy-merge__track {
+  position: relative;
+  height: 20px;
+  border: 1px solid rgba(233, 239, 234, 0.22);
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(233, 239, 234, 0.03);
+}
+
+/* The hatch IS the data mark — it is how a filled meter reads on the reference
+   board — not a decorative stripe background on a section. */
+.cy-merge__fill {
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(233, 239, 234, 0.92) 0 2px,
+      rgba(233, 239, 234, 0.45) 2px 4px
+    );
+  /* A green leading edge: the accent marks state, nothing else. */
+  box-shadow: inset -2px 0 0 var(--green), 0 0 14px var(--green-glow);
+}
+
+/* ── Estimated completion ───────────────────────────────────── */
+
+.cy-merge__eta {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.cy-merge__eta span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  padding-left: 0.26em;
+  /* grey-2, not grey-3. grey-3 is documented as clearing 4.5:1 against bg-0,
+     but this label sits on translucent glass over a lit scene, which runs
+     lighter than bg-0 — the guarantee doesn't hold here. */
+  color: var(--grey-2);
+}
+
+.cy-merge__eta b {
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--text-hi);
+}
+
+/* ── Responsive: structural collapse, not fluid type ────────── */
+
+@media (max-width: 900px) {
+  /* The plates are context, the readout is the task. Drop the plates and let
+     the meter own the width rather than shrinking all three to unreadable. */
+  .cy-merge__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cy-merge__plate {
+    display: none;
+  }
+  .cy-merge__readout {
+    padding: var(--sp-5) var(--sp-4);
+  }
+  .cy-merge__pct {
+    font-size: 2.75rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .cy-merge__head-dots {
+    display: none;
+  }
+  .cy-merge__head-title {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+  }
+}
