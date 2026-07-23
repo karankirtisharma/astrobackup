@@ -88,13 +88,22 @@ export function Anatomy() {
           // accent light that was tinting the muscle. The look is carried by
           // a DESATURATED self-emissive (silver-muscle, no colour cast), so
           // it reads like a clean scan regardless of the rig or its accents.
-          const lum = std.color.r * 0.299 + std.color.g * 0.587 + std.color.b * 0.114;
-          std.emissive.copy(std.color).lerp(new Color(lum, lum, lum), 0.7);
-          std.emissiveIntensity = 0.62;
+          // THE detail lives in the TEXTURE, not the base-colour factor: every
+          // Tripo part ships baseColor = pure white + a map. Deriving the
+          // emissive from std.color therefore painted a FLAT WHITE glow across
+          // the whole figure and drowned the texture — the "whitish blob".
+          // Drive the emissive from the MAP instead, so the self-lit floor
+          // carries the actual anatomical structure. Still fully decoupled from
+          // scene lighting (that rule stands) — the map is its own light.
+          if (std.map) std.emissiveMap = std.map;
+          std.emissive.setRGB(1, 1, 1); // map supplies colour + detail
+          std.emissiveIntensity = 0.7;
           std.color.multiplyScalar(0.32);
           std.roughness = 0.95;
           std.metalness = 0;
           std.envMapIntensity = 0.12;
+          // Adding emissiveMap changes the shader permutation — force a rebuild.
+          std.needsUpdate = true;
         }
       }
     });
