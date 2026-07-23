@@ -17,25 +17,23 @@ useGLTF.preload(ANATOMY_URL.cypherpunk);
 useGLTF.preload(ANATOMY_URL.astronaut);
 
 /**
- * Malformed sub-meshes to hide by name (spec §7). AI-generated anatomy models
- * routinely ship a few broken nodes — most often the hands — that read as
- * garbage geometry when revealed. Found by inspecting at `?xray=full`, then
- * listed here rather than attempting to repair the geometry.
+ * Sub-meshes to hide by name. Matched case-insensitively as substrings.
  *
- * Matched case-insensitively as substrings against node names.
+ * KEEP THESE EMPTY. Under the hard-cut reveal the body is DISCARDED inside the
+ * window, so anything hidden here leaves a literal HOLE straight through the
+ * character — you see the background where his hand should be.
+ *
+ * The hands (`tripo_part_7`, `tripo_part_24`) used to be listed: they are crude
+ * mitten geometry whose proportions drift from the body at the extremities, and
+ * under the OLD blended lens a hidden part simply faded to an empty feather,
+ * which read as "nothing to scan here". Under the cut it read as an amputation.
+ * A slightly-off anatomical hand beats a hole every time.
+ *
+ * If a part is genuinely malformed, fix or replace the geometry — do not hide
+ * it. Anything listed here must be geometry the body never covers.
  */
 const HIDDEN_MESH_PATTERNS: Record<Side, string[]> = {
-  cypherpunk: [
-    // The hands. Crude mitten geometry, and the anatomy figure's proportions
-    // drift from the body model's at the extremities, so the lens over a hand
-    // showed a displaced grey blob — the classic AI-model hand failure.
-    // Located via scripts/inspect-anatomy-parts.mjs (outermost |x| at wrist
-    // height). Hidden, the lens over a hand opens onto a soft empty feather,
-    // which reads as "nothing to scan here" rather than a glitch.
-    'tripo_part_7',
-    'tripo_part_24',
-  ],
-  // None identified yet — inspect at ?xray=full and add any broken nodes here.
+  cypherpunk: [],
   astronaut: [],
 };
 
