@@ -15,9 +15,13 @@
    to the foot of the row it reads as a readout laid over the floor, and the
    scene it is describing stays visible above it. */
 .cy-sync__center--merge {
-  width: min(860px, calc(100vw - var(--frame-inset) * 2));
+  width: min(760px, calc(100vw - var(--frame-inset) * 2));
   align-self: end;
-  margin-bottom: var(--sp-6);
+  /* Sits close to the cancel row on purpose. Narrowing also shortens the slab
+     (the plates scale with the column), so the top edge drops further than the
+     margin change alone accounts for — which is what puts it in the lower band
+     rather than across the middle of the scene. */
+  margin-bottom: var(--sp-2);
 }
 
 .cy-merge {
